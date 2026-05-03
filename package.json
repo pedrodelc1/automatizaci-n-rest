@@ -30,6 +30,9 @@
     "stripe": "^22.1.0",
     "zod": "^4.3.6"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
