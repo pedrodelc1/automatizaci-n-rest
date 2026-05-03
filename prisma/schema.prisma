@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @db.VarChar(100)
+  descripcion String?    @db.Text
+  activo      Boolean    @default(true)
+  orden       Int        @default(0)
+  productos   Producto[]
+  creadoEn    DateTime   @default(now()) @map("creado_en")
+
+  @@map("categorias")
+}
+
+model Producto {
+  id            Int        @id @default(autoincrement())
+  nombre        String     @db.VarChar(200)
+  descripcion   String?    @db.Text
+  precio        Decimal    @db.Decimal(10, 2)
+  imagenUrl     String?    @map("imagen_url") @db.VarChar(500)
+  categoriaId   Int        @map("categoria_id")
+  disponible    Boolean    @default(true)
+  destacado     Boolean    @default(false)
+  creadoEn      DateTime   @default(now()) @map("creado_en")
+  actualizadoEn DateTime   @updatedAt @map("actualizado_en")
+
+  categoria Categoria    @relation(fields: [categoriaId], references: [id])
+  items     ItemPedido[]
+
+  @@map("productos")
+}
+
+model Pedido {
+  id               Int          @id @default(autoincrement())
+  // Número legible para cocina: #0001, #0002, etc.
+  numeroPedido     Int          @unique @default(autoincrement()) @map("numero_pedido")
+  tipo             TipoPedido
+  estado           EstadoPedido @default(PENDIENTE)
+  nombreCliente    String       @map("nombre_cliente") @db.VarChar(200)
+  telefono         String       @db.VarChar(30)
+  email            String       @db.VarChar(200)
+  // Solo se completa si tipo = DELIVERY
+  direccionEntrega String?      @map("direccion_entrega") @db.Text
+  formaPago        FormaPago    @map("forma_pago")
+  estadoPago       EstadoPago   @default(PENDIENTE) @map("estado_pago")
+  // ID que devuelve MercadoPago al confirmar el pago
+  mpPaymentId      String?      @map("mp_payment_id") @db.VarChar(100)
+  total            Decimal      @db.Decimal(10, 2)
+  notas            String?      @db.Text
+  creadoEn         DateTime     @default(now()) @map("creado_en")
+  actualizadoEn    DateTime     @updatedAt @map("actualizado_en")
+
+  items ItemPedido[]
+
+  @@map("pedidos")
+}
+
+model ItemPedido {
+  id             Int     @id @default(autoincrement())
+  pedidoId       Int     @map("pedido_id")
+  productoId     Int     @map("producto_id")
+  cantidad       Int
+  // Precio capturado al momento del pedido (inmutable ante cambios futuros)
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  subtotal       Decimal @db.Decimal(10, 2)
+  notasItem      String? @map("notas_item") @db.Text
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("items_pedido")
+}
+
+enum TipoPedido {
+  DELIVERY
+  RETIRO
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  CONFIRMADO
+  EN_PREPARACION
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum FormaPago {
+  ONLINE
+  CONTRA_ENTREGA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  FALLIDO
+}

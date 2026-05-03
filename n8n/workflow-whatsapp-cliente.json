@@ -1,0 +1,167 @@
+{
+  "name": "Restaurante — WhatsApp al cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restaurante-eventos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-entrada",
+      "name": "Recibir evento del sistema",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-nuevo",
+              "leftValue": "={{ $json.body.evento }}",
+              "rightValue": "pedido.nuevo",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtro-nuevo",
+      "name": "¿Es pedido nuevo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-listo",
+              "leftValue": "={{ $json.body.evento }}",
+              "rightValue": "pedido.listo",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtro-listo",
+      "name": "¿Está listo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-pago",
+              "leftValue": "={{ $json.body.evento }}",
+              "rightValue": "pedido.pago_confirmado",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtro-pago",
+      "name": "¿Pago confirmado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedido = $input.first().json.body.pedido;\nconst tipo = pedido.tipo === 'DELIVERY' ? 'delivery' : 'retiro en local';\nconst items = pedido.items.map(i => `  • ${i.cantidad}x ${i.nombre}`).join('\\n');\n\nreturn [{\n  json: {\n    telefono: pedido.cliente.telefono,\n    mensaje: `¡Hola ${pedido.cliente.nombre}! 👋\\n\\nRecibimos tu pedido ${pedido.numero} para ${tipo}.\\n\\n*Tu pedido:*\\n${items}\\n\\n*Total: $${pedido.total.toLocaleString('es-AR')}*\\n\\nTe avisamos cuando esté listo. 🍽️`\n  }\n}];"
+      },
+      "id": "msg-nuevo",
+      "name": "Armar mensaje — Pedido recibido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedido = $input.first().json.body.pedido;\nconst esDelivery = pedido.tipo === 'DELIVERY';\n\nreturn [{\n  json: {\n    telefono: pedido.cliente.telefono,\n    mensaje: esDelivery\n      ? `¡Tu pedido ${pedido.numero} ya está en camino! 🛵\\n\\nEstamos llevando tu pedido a ${pedido.direccionEntrega}.\\n\\n_${pedido.restaurante}_`\n      : `¡Tu pedido ${pedido.numero} está listo para retirar! 🏪\\n\\nPasá a buscarlo cuando quieras.\\n\\n_${pedido.restaurante}_`\n  }\n}];"
+      },
+      "id": "msg-listo",
+      "name": "Armar mensaje — Pedido listo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedido = $input.first().json.body.pedido;\n\nreturn [{\n  json: {\n    telefono: pedido.cliente.telefono,\n    mensaje: `✅ Tu pago fue confirmado, ${pedido.cliente.nombre}!\\n\\nTu pedido ${pedido.numero} está siendo preparado.\\n*Total pagado: $${pedido.total.toLocaleString('es-AR')}*\\n\\n_${pedido.restaurante}_`\n  }\n}];"
+      },
+      "id": "msg-pago",
+      "name": "Armar mensaje — Pago confirmado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution-api-production-3285.up.railway.app/api/sendText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "a552c6bf017545aa99fc7153d0aa4960"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"session\": \"default\",\n  \"chatId\": \"{{ '549' + $json.telefono.replace(/\\\\D/g, '').replace(/^(549|54|0)/, '') + '@c.us' }}\",\n  \"text\": {{ JSON.stringify($json.mensaje) }}\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [960, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }"
+      },
+      "id": "respuesta-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1200, 400]
+    }
+  ],
+  "connections": {
+    "Recibir evento del sistema": {
+      "main": [[
+        { "node": "¿Es pedido nuevo?", "type": "main", "index": 0 },
+        { "node": "¿Está listo?", "type": "main", "index": 0 },
+        { "node": "¿Pago confirmado?", "type": "main", "index": 0 }
+      ]]
+    },
+    "¿Es pedido nuevo?":  { "main": [[{ "node": "Armar mensaje — Pedido recibido", "type": "main", "index": 0 }], []] },
+    "¿Está listo?":       { "main": [[{ "node": "Armar mensaje — Pedido listo", "type": "main", "index": 0 }], []] },
+    "¿Pago confirmado?":  { "main": [[{ "node": "Armar mensaje — Pago confirmado", "type": "main", "index": 0 }], []] },
+    "Armar mensaje — Pedido recibido":  { "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]] },
+    "Armar mensaje — Pedido listo":     { "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]] },
+    "Armar mensaje — Pago confirmado":  { "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]] },
+    "Enviar WhatsApp": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+  }
+}

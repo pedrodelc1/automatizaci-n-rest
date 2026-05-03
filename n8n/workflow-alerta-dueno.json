@@ -1,0 +1,132 @@
+{
+  "name": "Restaurante — Alertas al dueño",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restaurante-alertas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-entrada",
+      "name": "Recibir evento del sistema",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-impresora",
+              "leftValue": "={{ $json.body.evento }}",
+              "rightValue": "impresora.error",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtro-impresora",
+      "name": "¿Error de impresora?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-nuevo",
+              "leftValue": "={{ $json.body.evento }}",
+              "rightValue": "pedido.nuevo",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtro-nuevo",
+      "name": "¿Pedido nuevo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedido = $input.first().json.body.pedido;\nconst DUENO_TELEFONO = '5493416600928';\n\nreturn [{\n  json: {\n    telefono: DUENO_TELEFONO,\n    mensaje: `⚠️ *ERROR DE IMPRESORA*\\n\\nNo se pudo imprimir el ticket del pedido ${pedido.numero}.\\n\\nCliente: ${pedido.cliente.nombre}\\nTotal: $${pedido.total.toLocaleString('es-AR')}\\n\\n*Revisá la impresora y reimprimí desde el panel de admin.*`\n  }\n}];"
+      },
+      "id": "msg-impresora",
+      "name": "Mensaje — Error impresora",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedido = $input.first().json.body.pedido;\nconst DUENO_TELEFONO = '5493416600928';\nconst tipo = pedido.tipo === 'DELIVERY' ? '🛵 Delivery' : '🏪 Retiro';\nconst items = pedido.items.map(i => `  ${i.cantidad}x ${i.nombre}`).join('\\n');\nconst pago = pedido.formaPago === 'ONLINE' ? '💳 Online (pagado)' : '💵 Contra entrega';\n\nreturn [{\n  json: {\n    telefono: DUENO_TELEFONO,\n    mensaje: `🆕 *NUEVO PEDIDO ${pedido.numero}*\\n\\n${tipo} | ${pago}\\nCliente: ${pedido.cliente.nombre} (${pedido.cliente.telefono})\\n${pedido.direccionEntrega ? 'Dirección: ' + pedido.direccionEntrega + '\\n' : ''}\\n*Productos:*\\n${items}\\n\\n*Total: $${pedido.total.toLocaleString('es-AR')}*`\n  }\n}];"
+      },
+      "id": "msg-nuevo",
+      "name": "Mensaje — Nuevo pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution-api-production-3285.up.railway.app/api/sendText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "a552c6bf017545aa99fc7153d0aa4960"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"session\": \"default\",\n  \"chatId\": \"{{ '549' + $json.telefono.replace(/\\\\D/g, '').replace(/^(549|54|0)/, '') + '@c.us' }}\",\n  \"text\": {{ JSON.stringify($json.mensaje) }}\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp al dueño",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [960, 350]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }"
+      },
+      "id": "respuesta-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1200, 350]
+    }
+  ],
+  "connections": {
+    "Recibir evento del sistema": {
+      "main": [[
+        { "node": "¿Error de impresora?", "type": "main", "index": 0 },
+        { "node": "¿Pedido nuevo?", "type": "main", "index": 0 }
+      ]]
+    },
+    "¿Error de impresora?": { "main": [[{ "node": "Mensaje — Error impresora", "type": "main", "index": 0 }], []] },
+    "¿Pedido nuevo?":       { "main": [[{ "node": "Mensaje — Nuevo pedido",   "type": "main", "index": 0 }], []] },
+    "Mensaje — Error impresora": { "main": [[{ "node": "Enviar WhatsApp al dueño", "type": "main", "index": 0 }]] },
+    "Mensaje — Nuevo pedido":    { "main": [[{ "node": "Enviar WhatsApp al dueño", "type": "main", "index": 0 }]] },
+    "Enviar WhatsApp al dueño":  { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+  }
+}

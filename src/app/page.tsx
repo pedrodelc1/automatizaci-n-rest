@@ -1,101 +1,181 @@
-import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import { TarjetaProducto } from "@/components/menu/TarjetaProducto";
+import { BotonCarrito } from "@/components/ui/BotonCarrito";
+import { AccesoAdmin } from "@/components/ui/AccesoAdmin";
+import { MapPin, Clock, Star } from "lucide-react";
 
-export default function Home() {
+export const revalidate = 60;
+
+async function getMenu() {
+  return prisma.categoria.findMany({
+    where: { activo: true },
+    orderBy: { orden: "asc" },
+    include: {
+      productos: {
+        where: { disponible: true },
+        orderBy: [{ destacado: "desc" }, { nombre: "asc" }],
+      },
+    },
+  });
+}
+
+export default async function MenuPage() {
+  const categorias = await getMenu();
+  const cats = categorias.filter((c) => c.productos.length > 0);
+  const nombre = process.env.RESTAURANTE_NOMBRE ?? "El Restaurante";
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-cream-50 dark:bg-[#0D0C0A] pb-36">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* ── Hero ────────────────────────────────────────── */}
+      <div className="relative overflow-hidden" style={{
+        background: "linear-gradient(155deg, #92320c 0%, #c2470f 30%, #f97316 65%, #fbbf24 100%)",
+      }}>
+        {/* Textura grain */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.08]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Overlay superior oscuro */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
+
+        {/* Forma decorativa */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-white/[0.06] rounded-full pointer-events-none" />
+        <div className="absolute top-8 -right-8 w-40 h-40 bg-white/[0.06] rounded-full pointer-events-none" />
+
+        <div className="relative max-w-2xl mx-auto px-5 pt-12 pb-28">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              {/* Logo */}
+              <div
+                className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 select-none"
+                style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)" }}
+              >
+                🍽️
+              </div>
+              <div className="pt-1">
+                <h1 className="font-display text-[2.1rem] font-bold text-white leading-none tracking-[-0.02em]">
+                  {nombre}
+                </h1>
+                <p className="text-orange-100/80 text-[13px] font-medium mt-1.5 tracking-wide">
+                  Delivery & retiro en local
+                </p>
+                <div className="flex items-center gap-1.5 mt-2.5">
+                  <Star size={11} className="fill-amber-300 text-amber-300" />
+                  <span className="text-white text-xs font-bold">4.8</span>
+                  <span className="text-orange-200/70 text-xs ml-0.5">· +200 pedidos</span>
+                </div>
+              </div>
+            </div>
+            <AccesoAdmin />
+          </div>
+
+          {/* Chips */}
+          <div className="flex items-center gap-2 mt-6 flex-wrap">
+            {[
+              { icon: "🛵", text: "Delivery ~45 min" },
+              { icon: "🏪", text: "Retiro ~20 min" },
+            ].map((c) => (
+              <span
+                key={c.text}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/20 text-white"
+                style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
+              >
+                {c.icon} {c.text}
+              </span>
+            ))}
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/20 text-white"
+              style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
+            >
+              <Clock size={10} /> Abierto ahora
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/20 text-white"
+              style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
+            >
+              <MapPin size={10} /> Corrientes 1234
+            </span>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+
+      {/* ── Card principal ───────────────────────────────── */}
+      <div className="max-w-2xl mx-auto px-3 -mt-16 relative z-10">
+        <div
+          className="bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden"
+          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04), 0 16px 48px rgba(0,0,0,0.10)" }}
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {/* Category tabs */}
+          {cats.length > 1 && (
+            <nav className="px-2 pt-2 flex gap-0 overflow-x-auto scrollbar-hide border-b border-neutral-100 dark:border-neutral-800/80">
+              {cats.map((cat) => (
+                <a
+                  key={cat.id}
+                  href={`#cat-${cat.id}`}
+                  className="category-tab"
+                >
+                  {cat.nombre}
+                </a>
+              ))}
+            </nav>
+          )}
+
+          {/* Productos */}
+          <div>
+            {cats.length === 0 ? (
+              <div className="text-center py-24 px-4">
+                <div className="text-5xl mb-5">🍽️</div>
+                <p className="font-display text-xl font-semibold text-neutral-700 dark:text-neutral-300">
+                  El menú está siendo preparado
+                </p>
+                <p className="text-neutral-400 text-sm mt-2">Volvé en unos minutos</p>
+              </div>
+            ) : (
+              cats.map((categoria, catIdx) => (
+                <section
+                  key={categoria.id}
+                  id={`cat-${categoria.id}`}
+                  className="scroll-mt-4"
+                >
+                  <div className={`px-5 flex items-baseline gap-3 ${catIdx === 0 ? "pt-5 pb-2" : "pt-7 pb-2"}`}>
+                    <h2 className="section-title">{categoria.nombre}</h2>
+                    {categoria.descripcion && (
+                      <span className="text-[13px] text-neutral-400 dark:text-neutral-500 hidden sm:inline font-medium">
+                        {categoria.descripcion}
+                      </span>
+                    )}
+                  </div>
+                  <div className="px-2 pb-2">
+                    {categoria.productos.map((producto) => (
+                      <TarjetaProducto key={producto.id} producto={producto} />
+                    ))}
+                  </div>
+                  {catIdx < cats.length - 1 && (
+                    <div className="mx-5 h-px bg-neutral-100 dark:bg-neutral-800/60" />
+                  )}
+                </section>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          {cats.length > 0 && (
+            <div className="px-5 py-4 mt-2 border-t border-neutral-100 dark:border-neutral-800/60 flex items-center justify-between">
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-600">
+                Precios en pesos · IVA incluido
+              </p>
+              <span className="font-display text-[11px] text-neutral-300 dark:text-neutral-700 font-semibold italic">
+                MenuYa
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <BotonCarrito />
     </div>
   );
 }
