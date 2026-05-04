@@ -252,6 +252,12 @@ function TarjetaPedido({
                 ? "💳 Crédito"
                 : "💵 Contra entrega"}
             </span>
+            {/* Vuelto para pedidos en efectivo */}
+            {pedido.formaPago === "EFECTIVO" && pedido.montoCon != null && (
+              <span className="text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-md text-[11px]">
+                Paga ${ Number(pedido.montoCon).toLocaleString("es-AR") } · vuelto ${(Number(pedido.montoCon) - Number(pedido.total)).toLocaleString("es-AR")}
+              </span>
+            )}
           </div>
           {pedido.tipo === "DELIVERY" && pedido.direccionEntrega && (
             <p className="flex items-start gap-1 text-neutral-400 dark:text-neutral-500 text-xs">

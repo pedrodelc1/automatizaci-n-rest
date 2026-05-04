@@ -6,6 +6,28 @@ import { notificar } from "@/lib/notificaciones";
 import { esAdminAutorizado } from "@/lib/admin-auth";
 import { EstadoPedido, FormaPago, TipoPedido } from "@prisma/client";
 import { COOKIE_CARRITO, obtenerSesionActiva } from "@/lib/carrito-sesion";
+import { getEstadoHorario } from "@/config/restaurante";
+
+// Rate limiting en memoria — 5 pedidos por IP cada 5 minutos
+const pedidosRateLimit = new Map<string, { count: number; desde: number }>();
+const MAX_PEDIDOS = 5;
+const VENTANA_PEDIDOS_MS = 5 * 60 * 1000;
+
+function getIP(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+function checkPedidoRateLimit(ip: string): boolean {
+  const ahora = Date.now();
+  const record = pedidosRateLimit.get(ip);
+  if (!record || ahora - record.desde > VENTANA_PEDIDOS_MS) {
+    pedidosRateLimit.set(ip, { count: 1, desde: ahora });
+    return true;
+  }
+  if (record.count >= MAX_PEDIDOS) return false;
+  record.count++;
+  return true;
+}
 
 const crearPedidoSchema = z
   .object({
@@ -26,6 +48,23 @@ const crearPedidoSchema = z
   );
 
 export async function POST(req: NextRequest) {
+  // Rate limiting
+  if (!checkPedidoRateLimit(getIP(req))) {
+    return NextResponse.json(
+      { ok: false, error: "Demasiados pedidos. Esperá unos minutos." },
+      { status: 429 }
+    );
+  }
+
+  // Bloquear pedidos fuera de horario
+  const horario = getEstadoHorario();
+  if (!horario.abierto) {
+    return NextResponse.json(
+      { ok: false, error: `El restaurante está cerrado. ${horario.etiqueta}.` },
+      { status: 400 }
+    );
+  }
+
   try {
     const body = await req.json();
     const parsed = crearPedidoSchema.safeParse(body);

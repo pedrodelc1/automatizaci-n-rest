@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ElementType } from "react";
@@ -31,9 +31,24 @@ export default function CarritoPage() {
   const [tipoTarjeta, setTipoTarjeta] = useState<TipoTarjeta>("DEBITO");
   const [montoCon, setMontoCon] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [restauranteCerrado, setRestauranteCerrado] = useState(false);
+  const [msgCerrado, setMsgCerrado] = useState("");
   const [form, setForm] = useState<FormData>({
     nombreCliente: "", telefono: "", email: "", direccionEntrega: "", notas: "",
   });
+
+  // Verificar si el restaurante está abierto al montar el carrito
+  useEffect(() => {
+    fetch("/api/estado")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.abierto) {
+          setRestauranteCerrado(true);
+          setMsgCerrado(d.etiqueta ?? "Cerrado por el momento");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const set = (k: keyof FormData, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -356,15 +371,28 @@ export default function CarritoPage() {
             </span>
           </div>
 
+          {/* Banner cerrado */}
+          {restauranteCerrado && (
+            <div className="mx-5 mb-1 flex items-start gap-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 px-4 py-3">
+              <span className="text-lg flex-shrink-0">🔒</span>
+              <div>
+                <p className="font-semibold text-red-700 dark:text-red-400 text-[13px]">Restaurante cerrado</p>
+                <p className="text-red-600 dark:text-red-500 text-[12px] mt-0.5">{msgCerrado}. No se pueden recibir pedidos en este momento.</p>
+              </div>
+            </div>
+          )}
+
           {/* CTA */}
           <div className="px-5 pb-5 pt-4 space-y-3">
             <button
               onClick={confirmarPedido}
-              disabled={cargando}
-              className="btn-primary w-full py-4 text-[15px]"
+              disabled={cargando || restauranteCerrado}
+              className="btn-primary w-full py-4 text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cargando ? (
                 <><Spinner className="w-5 h-5" /> Procesando...</>
+              ) : restauranteCerrado ? (
+                <>Restaurante cerrado</>
               ) : formaPago === "ONLINE" ? (
                 <>Pagar online <ChevronRight size={17} /></>
               ) : (

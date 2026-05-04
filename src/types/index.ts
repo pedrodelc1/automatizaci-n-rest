@@ -31,13 +31,21 @@ export type PedidoConItems = Pedido & {
 
 // ─── Payload para crear un pedido ─────────────────────────────────────────────
 
+export type FormaPagoCliente =
+  | "ONLINE"
+  | "EFECTIVO"
+  | "TARJETA_DEBITO"
+  | "TARJETA_CREDITO"
+  | "CONTRA_ENTREGA";
+
 export interface CrearPedidoPayload {
   tipo: "DELIVERY" | "RETIRO";
   nombreCliente: string;
   telefono: string;
   email: string;
   direccionEntrega?: string;
-  formaPago: "ONLINE" | "CONTRA_ENTREGA";
+  formaPago: FormaPagoCliente;
+  montoCon?: number;
   notas?: string;
   items: {
     productoId: number;

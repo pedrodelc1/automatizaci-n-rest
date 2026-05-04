@@ -24,10 +24,13 @@ echo ""
 
 read -p "$(echo -e ${AMARILLO}Nombre del restaurante:${RESET} )" NOMBRE_REST
 read -p "$(echo -e ${AMARILLO}Slug/carpeta \(sin espacios, ej: la-pizzeria\):${RESET} )" SLUG
-read -p "$(echo -e ${AMARILLO}Color principal en hex \(ej: #f97316 para naranja\):${RESET} )" COLOR
+read -p "$(echo -e ${AMARILLO}Dirección del local \(ej: Av. Corrientes 1234, CABA\):${RESET} )" DIRECCION
+read -p "$(echo -e ${AMARILLO}Emoji del restaurante \(ej: 🍕 🍔 🌮\):${RESET} )" EMOJI
+read -p "$(echo -e ${AMARILLO}Horario apertura \(HH:MM, ej: 10:00\):${RESET} )" APERTURA
+read -p "$(echo -e ${AMARILLO}Horario cierre \(HH:MM, ej: 23:00\):${RESET} )" CIERRE
 read -p "$(echo -e ${AMARILLO}Tiempo estimado delivery \(minutos, ej: 45\):${RESET} )" TIEMPO_DELIVERY
 read -p "$(echo -e ${AMARILLO}Tiempo estimado retiro \(minutos, ej: 20\):${RESET} )" TIEMPO_RETIRO
-read -p "$(echo -e ${AMARILLO}IP de la impresora térmica \(ej: 192.168.1.100\):${RESET} )" PRINTER_IP
+read -p "$(echo -e ${AMARILLO}IP de la impresora térmica \(ej: 192.168.1.100 — dejar vacío si no tiene\):${RESET} )" PRINTER_IP
 
 echo ""
 
@@ -74,67 +77,67 @@ ADMIN_PASSWORD="${ADMIN_PASS}"
 
 NEXT_PUBLIC_BASE_URL="http://localhost:3000"
 
+# ─── Identidad del restaurante ───────────────────────────────
+RESTAURANTE_NOMBRE="${NOMBRE_REST}"
+RESTAURANTE_EMOJI="${EMOJI}"
+RESTAURANTE_DIRECCION="${DIRECCION}"
+RESTAURANTE_TELEFONO=""
+RESTAURANTE_HORARIO_APERTURA="${APERTURA}"
+RESTAURANTE_HORARIO_CIERRE="${CIERRE}"
+RESTAURANTE_TIMEZONE="America/Argentina/Buenos_Aires"
+
+# ─── Tiempos estimados ───────────────────────────────────────
 TIEMPO_ESTIMADO_DELIVERY="${TIEMPO_DELIVERY}"
 TIEMPO_ESTIMADO_RETIRO="${TIEMPO_RETIRO}"
+
+# ─── N8N + WhatsApp ──────────────────────────────────────────
+N8N_WEBHOOK_URL=""
+N8N_WEBHOOK_DUENO_URL=""
+
+PORT=3000
+NIXPACKS_NODE_VERSION=22
 EOF
 
 echo -e "${VERDE}✓ Archivo .env creado${RESET}"
 
-# ── 6. Generar config del restaurante ────────────────────────
-
-cat > "$DESTINO/src/config/restaurante.ts" << EOF
-// Configuración específica de: ${NOMBRE_REST}
-// Generado el $(date '+%d/%m/%Y')
-
-export const config = {
-  nombre: "${NOMBRE_REST}",
-  descripcion: "Delivery y retiro en local",
-  colorPrimario: "${COLOR}",
-  logo: null as string | null,
-  tiempoEstimadoDelivery: ${TIEMPO_DELIVERY},
-  tiempoEstimadoRetiro: ${TIEMPO_RETIRO},
-  costoEnvio: 0,
-  moneda: "ARS",
-  whatsapp: null as string | null,
-} as const;
-EOF
-
-mkdir -p "$DESTINO/src/config"
-echo -e "${VERDE}✓ Configuración del restaurante creada${RESET}"
-
-# ── 7. Instalar dependencias ──────────────────────────────────
+# ── 6. Instalar dependencias ──────────────────────────────────
 
 echo ""
 echo -e "${CYAN}Instalando dependencias...${RESET}"
 cd "$DESTINO" && npm install --silent
 echo -e "${VERDE}✓ Dependencias instaladas${RESET}"
 
-# ── 8. Resumen final ─────────────────────────────────────────
+# ── 7. Resumen final ─────────────────────────────────────────
 
 echo ""
 echo -e "${NEGRITA}${VERDE}╔══════════════════════════════════════════════════╗${RESET}"
 echo -e "${NEGRITA}${VERDE}║              ✓ Proyecto creado                  ║${RESET}"
 echo -e "${NEGRITA}${VERDE}╚══════════════════════════════════════════════════╝${RESET}"
 echo ""
-echo -e "  ${NEGRITA}Restaurante:${RESET}  ${NOMBRE_REST}"
+echo -e "  ${NEGRITA}Restaurante:${RESET}  ${NOMBRE_REST} ${EMOJI}"
+echo -e "  ${NEGRITA}Dirección:${RESET}    ${DIRECCION}"
+echo -e "  ${NEGRITA}Horario:${RESET}      ${APERTURA} – ${CIERRE}"
 echo -e "  ${NEGRITA}Carpeta:${RESET}      ~/restaurantes/${SLUG}"
 echo -e "  ${NEGRITA}Contraseña:${RESET}   ${ROJO}${NEGRITA}${ADMIN_PASS}${RESET}  ← guardala ahora"
 echo ""
 echo -e "${AMARILLO}Próximos pasos:${RESET}"
 echo -e "  1. Crear DB en Railway y pegar DATABASE_URL en .env"
 echo -e "  2. Pegar credenciales de MercadoPago en .env"
-echo -e "  3. cd ~/restaurantes/${SLUG} && npm run db:push && npm run db:seed"
-echo -e "  4. Desplegar en Railway"
+echo -e "  3. Configurar N8N_WEBHOOK_URL y N8N_WEBHOOK_DUENO_URL en .env"
+echo -e "  4. cd ~/restaurantes/${SLUG} && npm run db:push && npm run db:seed"
+echo -e "  5. Desplegar en Railway"
 echo ""
 
 # Guardar resumen en archivo para no perder la contraseña
 RESUMEN="$HOME/restaurantes/${SLUG}_credenciales.txt"
 cat > "$RESUMEN" << EOF
 Restaurante: ${NOMBRE_REST}
+Emoji: ${EMOJI}
 Fecha: $(date '+%d/%m/%Y %H:%M')
 Carpeta: ~/restaurantes/${SLUG}
 Contraseña admin: ${ADMIN_PASS}
-Color: ${COLOR}
+Dirección: ${DIRECCION}
+Horario: ${APERTURA} – ${CIERRE}
 Impresora IP: ${PRINTER_IP}
 EOF
 

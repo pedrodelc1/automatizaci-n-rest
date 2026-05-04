@@ -60,7 +60,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = $input.first().json.body.payload;\nconst chatId = payload.from;\n\nconst URL_PEDIDOS = 'http://localhost:3000';\n\nconst mensaje = `¡Hola! 👋 Gracias por escribirnos.\\n\\nPara hacer tu pedido ingresá a nuestra página web:\\n🌐 ${URL_PEDIDOS}\\n\\nElegís lo que querés, completás tus datos y listo. Te avisamos por acá cuando tu pedido esté en camino. 🍽️`;\n\nreturn [{ json: { chatId, mensaje } }];"
+        "jsCode": "const payload = $input.first().json.body.payload;\nconst chatId = payload.from;\n\nconst URL_PEDIDOS = 'https://automatizaci-n-rest-production.up.railway.app';\n\nconst mensaje = `¡Hola! 👋 Gracias por escribirnos.\\n\\nPara hacer tu pedido ingresá a nuestra página web:\\n🌐 ${URL_PEDIDOS}\\n\\nElegís lo que querés, completás tus datos y listo. Te avisamos por acá cuando tu pedido esté en camino. 🍽️`;\n\nreturn [{ json: { chatId, mensaje } }];"
       },
       "id": "armar-respuesta",
       "name": "Armar respuesta",
@@ -71,7 +71,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://evolution-api-production-3285.up.railway.app/api/sendText",
+        "url": "https://waha-production-cf74.up.railway.app/api/sendText",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
