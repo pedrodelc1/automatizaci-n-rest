@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ElementType } from "react";
-import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, ChevronRight, CreditCard, Banknote, Truck, Store } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, ChevronRight, CreditCard, Banknote, Truck, Store, Wallet } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";
 
 type Modalidad = "DELIVERY" | "RETIRO";
-type FormaPago = "ONLINE" | "CONTRA_ENTREGA";
+type FormaPagoLocal = "ONLINE" | "EFECTIVO" | "TARJETA_LOCAL";
+type TipoTarjeta = "DEBITO" | "CREDITO";
 
 interface FormData {
   nombreCliente: string;
@@ -26,7 +27,9 @@ export default function CarritoPage() {
   const { items, totalPrecio, cambiarCantidad, vaciar } = useCarrito();
 
   const [modalidad, setModalidad] = useState<Modalidad>("DELIVERY");
-  const [formaPago, setFormaPago] = useState<FormaPago>("ONLINE");
+  const [formaPago, setFormaPago] = useState<FormaPagoLocal>("ONLINE");
+  const [tipoTarjeta, setTipoTarjeta] = useState<TipoTarjeta>("DEBITO");
+  const [montoCon, setMontoCon] = useState("");
   const [cargando, setCargando] = useState(false);
   const [form, setForm] = useState<FormData>({
     nombreCliente: "", telefono: "", email: "", direccionEntrega: "", notas: "",
@@ -44,6 +47,11 @@ export default function CarritoPage() {
       return;
     }
 
+    const formaPagoApi =
+      formaPago === "TARJETA_LOCAL"
+        ? tipoTarjeta === "DEBITO" ? "TARJETA_DEBITO" : "TARJETA_CREDITO"
+        : formaPago;
+
     setCargando(true);
     try {
       const res = await fetch("/api/pedidos", {
@@ -55,7 +63,8 @@ export default function CarritoPage() {
           telefono: form.telefono,
           email: form.email,
           direccionEntrega: modalidad === "DELIVERY" ? form.direccionEntrega : undefined,
-          formaPago,
+          formaPago: formaPagoApi,
+          montoCon: formaPago === "EFECTIVO" && montoCon ? Number(montoCon) : undefined,
           notas: form.notas || undefined,
         }),
       });
@@ -229,44 +238,89 @@ export default function CarritoPage() {
           <p className="label-caps">Forma de pago</p>
           <div className="space-y-2">
             {([
-              { valor: "ONLINE",         icon: CreditCard, label: "Pago online",     sub: "Tarjeta, MercadoPago, transferencia" },
-              { valor: "CONTRA_ENTREGA", icon: Banknote,   label: "Pago al recibir", sub: "Efectivo o posnet al recibir" },
-            ] as { valor: FormaPago; icon: ElementType; label: string; sub: string }[]).map((fp) => {
+              { valor: "ONLINE",        icon: CreditCard, label: "Pago online",      sub: "Tarjeta, MercadoPago, transferencia" },
+              { valor: "EFECTIVO",      icon: Banknote,   label: "Efectivo",          sub: "Pagás en efectivo al recibir" },
+              { valor: "TARJETA_LOCAL", icon: Wallet,     label: "Tarjeta al llegar", sub: "Débito o crédito al recibir" },
+            ] as { valor: FormaPagoLocal; icon: ElementType; label: string; sub: string }[]).map((fp) => {
               const Icon = fp.icon;
               const activo = formaPago === fp.valor;
               return (
-                <button
-                  key={fp.valor}
-                  onClick={() => setFormaPago(fp.valor)}
-                  className={clsx(
-                    "w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all duration-150 active:scale-[0.98]",
-                    activo
-                      ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20"
-                      : "border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 hover:border-neutral-200 dark:hover:border-neutral-700"
-                  )}
-                >
-                  <div className={clsx(
-                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                    activo ? "bg-orange-500" : "bg-neutral-200 dark:bg-neutral-700"
-                  )}>
-                    <Icon size={19} className={activo ? "text-white" : "text-neutral-500 dark:text-neutral-400"} />
-                  </div>
-                  <div className="flex-1">
-                    <p className={clsx(
-                      "font-bold text-[13px] tracking-[-0.01em]",
-                      activo ? "text-orange-600 dark:text-orange-400" : "text-neutral-700 dark:text-neutral-300"
+                <div key={fp.valor} className="space-y-2">
+                  <button
+                    onClick={() => setFormaPago(fp.valor)}
+                    className={clsx(
+                      "w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all duration-150 active:scale-[0.98]",
+                      activo
+                        ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20"
+                        : "border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 hover:border-neutral-200 dark:hover:border-neutral-700"
+                    )}
+                  >
+                    <div className={clsx(
+                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      activo ? "bg-orange-500" : "bg-neutral-200 dark:bg-neutral-700"
                     )}>
-                      {fp.label}
-                    </p>
-                    <p className="text-[12px] text-neutral-400 dark:text-neutral-500 mt-0.5">{fp.sub}</p>
-                  </div>
-                  <div className={clsx(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    activo ? "border-orange-500 bg-orange-500" : "border-neutral-300 dark:border-neutral-600"
-                  )}>
-                    {activo && <div className="w-2 h-2 bg-white rounded-full" />}
-                  </div>
-                </button>
+                      <Icon size={19} className={activo ? "text-white" : "text-neutral-500 dark:text-neutral-400"} />
+                    </div>
+                    <div className="flex-1">
+                      <p className={clsx(
+                        "font-bold text-[13px] tracking-[-0.01em]",
+                        activo ? "text-orange-600 dark:text-orange-400" : "text-neutral-700 dark:text-neutral-300"
+                      )}>
+                        {fp.label}
+                      </p>
+                      <p className="text-[12px] text-neutral-400 dark:text-neutral-500 mt-0.5">{fp.sub}</p>
+                    </div>
+                    <div className={clsx(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      activo ? "border-orange-500 bg-orange-500" : "border-neutral-300 dark:border-neutral-600"
+                    )}>
+                      {activo && <div className="w-2 h-2 bg-white rounded-full" />}
+                    </div>
+                  </button>
+
+                  {/* Sub-opción efectivo: ¿con cuánto pagás? */}
+                  {activo && fp.valor === "EFECTIVO" && (
+                    <div className="ml-4 pl-4 border-l-2 border-orange-200 dark:border-orange-800/40">
+                      <label className="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
+                        ¿Con cuánto vas a pagar? (opcional)
+                      </label>
+                      <input
+                        className="input"
+                        type="number"
+                        placeholder="Ej: 5000"
+                        min="0"
+                        value={montoCon}
+                        onChange={(e) => setMontoCon(e.target.value)}
+                      />
+                      <p className="text-[11px] text-neutral-400 mt-1 ml-1">Así preparamos el vuelto</p>
+                    </div>
+                  )}
+
+                  {/* Sub-opción tarjeta: débito o crédito */}
+                  {activo && fp.valor === "TARJETA_LOCAL" && (
+                    <div className="ml-4 pl-4 border-l-2 border-orange-200 dark:border-orange-800/40">
+                      <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
+                        Tipo de tarjeta
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["DEBITO", "CREDITO"] as TipoTarjeta[]).map((tipo) => (
+                          <button
+                            key={tipo}
+                            onClick={() => setTipoTarjeta(tipo)}
+                            className={clsx(
+                              "py-2.5 px-3 rounded-xl border-2 text-[13px] font-semibold transition-all",
+                              tipoTarjeta === tipo
+                                ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400"
+                                : "border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400"
+                            )}
+                          >
+                            {tipo === "DEBITO" ? "Débito" : "Crédito"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

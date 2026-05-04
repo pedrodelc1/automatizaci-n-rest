@@ -49,6 +49,7 @@ model Pedido {
   // Solo se completa si tipo = DELIVERY
   direccionEntrega String?      @map("direccion_entrega") @db.Text
   formaPago        FormaPago    @map("forma_pago")
+  montoCon         Decimal?     @map("monto_con") @db.Decimal(10, 2)
   estadoPago       EstadoPago   @default(PENDIENTE) @map("estado_pago")
   // ID que devuelve MercadoPago al confirmar el pago
   mpPaymentId      String?      @map("mp_payment_id") @db.VarChar(100)
@@ -95,6 +96,9 @@ enum EstadoPedido {
 enum FormaPago {
   ONLINE
   CONTRA_ENTREGA
+  EFECTIVO
+  TARJETA_DEBITO
+  TARJETA_CREDITO
 }
 
 enum EstadoPago {

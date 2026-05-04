@@ -130,6 +130,14 @@ export default async function ConfirmacionPage({ params }: Props) {
               <span className={pagado ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-neutral-500 dark:text-neutral-400"}>
                 {pedido.formaPago === "ONLINE"
                   ? pagado ? "Online — Pagado ✓" : "Online — Pendiente"
+                  : pedido.formaPago === "EFECTIVO"
+                  ? pedido.montoCon
+                    ? `Efectivo — pagás con $${Number(pedido.montoCon).toLocaleString("es-AR")}`
+                    : "Efectivo al recibir"
+                  : pedido.formaPago === "TARJETA_DEBITO"
+                  ? "Tarjeta débito al recibir"
+                  : pedido.formaPago === "TARJETA_CREDITO"
+                  ? "Tarjeta crédito al recibir"
                   : "Efectivo / posnet al recibir"}
               </span>
             </div>

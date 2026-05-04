@@ -15,6 +15,7 @@ const crearPedidoSchema = z
     email: z.string().email(),
     direccionEntrega: z.string().max(300).optional(),
     formaPago: z.nativeEnum(FormaPago),
+    montoCon: z.number().positive().optional(),
     notas: z.string().max(500).optional(),
   })
   .refine(
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { tipo, nombreCliente, telefono, email, direccionEntrega, formaPago, notas } =
+    const { tipo, nombreCliente, telefono, email, direccionEntrega, formaPago, montoCon, notas } =
       parsed.data;
 
     // Leer items del carrito server-side (nunca del body del cliente)
@@ -98,11 +99,11 @@ export async function POST(req: NextRequest) {
         email,
         direccionEntrega: tipo === TipoPedido.DELIVERY ? direccionEntrega : null,
         formaPago,
+        montoCon: montoCon ?? null,
         notas,
         total,
-        // Pago contra entrega se confirma directamente; online queda PENDIENTE
-        estadoPago: formaPago === FormaPago.CONTRA_ENTREGA ? "PENDIENTE" : "PENDIENTE",
-        estado: formaPago === FormaPago.CONTRA_ENTREGA ? "CONFIRMADO" : "PENDIENTE",
+        estadoPago: "PENDIENTE",
+        estado: formaPago === FormaPago.ONLINE ? "PENDIENTE" : "CONFIRMADO",
         items: {
           create: itemsConPrecio.map((i) => ({
             productoId: i.productoId,
@@ -118,8 +119,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Contra entrega: confirmar, imprimir y notificar de inmediato
-    if (formaPago === FormaPago.CONTRA_ENTREGA) {
+    // Pago presencial (efectivo o tarjeta al llegar): confirmar, imprimir y notificar de inmediato
+    if (formaPago !== FormaPago.ONLINE) {
       imprimirTicket(pedido).catch((e) =>
         console.error("[POST /api/pedidos] Error de impresión:", e)
       );
