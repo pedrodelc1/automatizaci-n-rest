@@ -8,8 +8,9 @@ export const restaurante = {
   telefono:        process.env.RESTAURANTE_TELEFONO        ?? "",
   tiempoDelivery:  process.env.TIEMPO_ESTIMADO_DELIVERY    ?? "45",
   tiempoRetiro:    process.env.TIEMPO_ESTIMADO_RETIRO      ?? "20",
-  horarioApertura: process.env.RESTAURANTE_HORARIO_APERTURA ?? "09:00",
-  horarioCierre:   process.env.RESTAURANTE_HORARIO_CIERRE  ?? "23:00",
+  // Si no están configurados, el restaurante se considera abierto 24hs
+  horarioApertura: process.env.RESTAURANTE_HORARIO_APERTURA ?? null,
+  horarioCierre:   process.env.RESTAURANTE_HORARIO_CIERRE  ?? null,
   timezone:        process.env.RESTAURANTE_TIMEZONE        ?? "America/Argentina/Buenos_Aires",
 };
 
@@ -19,6 +20,11 @@ export interface EstadoHorario {
 }
 
 export function getEstadoHorario(): EstadoHorario {
+  // Si no hay horario configurado, siempre abierto
+  if (!restaurante.horarioApertura || !restaurante.horarioCierre) {
+    return { abierto: true, etiqueta: "Abierto" };
+  }
+
   const ahora = new Date();
   const localStr = ahora.toLocaleString("en-US", { timeZone: restaurante.timezone });
   const local = new Date(localStr);
@@ -26,7 +32,7 @@ export function getEstadoHorario(): EstadoHorario {
   const [aH, aM] = restaurante.horarioApertura.split(":").map(Number);
   const [cH, cM] = restaurante.horarioCierre.split(":").map(Number);
 
-  const minActual  = local.getHours() * 60 + local.getMinutes();
+  const minActual   = local.getHours() * 60 + local.getMinutes();
   const minApertura = aH * 60 + aM;
   const minCierre   = cH * 60 + cM;
 
