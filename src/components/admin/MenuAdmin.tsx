@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Upload, X, ImageIcon } from "lucide-react";
 import { clsx } from "clsx";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
@@ -247,6 +247,141 @@ function Modal({ titulo, onClose, children }: { titulo: string; onClose: () => v
   );
 }
 
+function SubidorImagen({
+  valor,
+  onChange,
+}: {
+  valor: string;
+  onChange: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [arrastrandoEncima, setArrastrandoEncima] = useState(false);
+  const [error, setError] = useState("");
+
+  async function subirArchivo(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Solo se permiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen no puede superar 5MB");
+      return;
+    }
+    setError("");
+    setSubiendo(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        credentials: "same-origin",
+        body: fd,
+      });
+      const data = await res.json();
+      if (data.ok) {
+        onChange(data.data.url);
+      } else {
+        setError(data.error ?? "Error al subir");
+      }
+    } catch {
+      setError("Error de conexión");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setArrastrandoEncima(false);
+    const file = e.dataTransfer.files[0];
+    if (file) subirArchivo(file);
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) subirArchivo(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Imagen</p>
+
+      {valor ? (
+        /* Preview de imagen actual */
+        <div className="relative rounded-xl overflow-hidden bg-gray-800 border border-gray-700" style={{ height: 160 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={valor} alt="Preview" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+            >
+              <Upload size={13} /> Cambiar
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="flex items-center gap-1.5 bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+            >
+              <X size={13} /> Quitar
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Zona de drag & drop */
+        <div
+          onDragOver={(e) => { e.preventDefault(); setArrastrandoEncima(true); }}
+          onDragLeave={() => setArrastrandoEncima(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          className={clsx(
+            "relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors select-none",
+            arrastrandoEncima
+              ? "border-orange-400 bg-orange-500/10"
+              : "border-gray-700 bg-gray-800/50 hover:border-gray-500 hover:bg-gray-800"
+          )}
+          style={{ height: 140 }}
+        >
+          {subiendo ? (
+            <><Spinner className="w-6 h-6 text-orange-500" /><p className="text-xs text-gray-400">Subiendo...</p></>
+          ) : (
+            <>
+              <div className="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center">
+                <ImageIcon size={20} className="text-gray-400" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-300">
+                  {arrastrandoEncima ? "Soltá acá" : "Arrastrá una imagen o hacé clic"}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">PNG, JPG, WEBP · máx 5MB</p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {subiendo && valor && (
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <Spinner className="w-3 h-3 text-orange-500" /> Subiendo nueva imagen...
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onFileChange}
+      />
+    </div>
+  );
+}
+
 function FormProducto({ inicial, categorias, guardando, onGuardar, onCancelar }: {
   inicial: Partial<Producto>;
   categorias: Categoria[];
@@ -262,7 +397,7 @@ function FormProducto({ inicial, categorias, guardando, onGuardar, onCancelar }:
       <input className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500" placeholder="Nombre *" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} required />
       <textarea className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500 resize-none" placeholder="Descripción" rows={2} value={form.descripcion ?? ""} onChange={(e) => set("descripcion", e.target.value)} />
       <input className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500" placeholder="Precio *" type="number" min="0" step="1" value={form.precio ?? ""} onChange={(e) => set("precio", e.target.value)} required />
-      <input className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500" placeholder="URL de imagen (opcional)" value={form.imagenUrl ?? ""} onChange={(e) => set("imagenUrl", e.target.value)} />
+      <SubidorImagen valor={form.imagenUrl ?? ""} onChange={(url) => set("imagenUrl", url)} />
       <select className="input bg-gray-800 border-gray-700 text-white" value={form.categoriaId ?? ""} onChange={(e) => set("categoriaId", parseInt(e.target.value))} required>
         <option value="">Seleccioná una categoría *</option>
         {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
