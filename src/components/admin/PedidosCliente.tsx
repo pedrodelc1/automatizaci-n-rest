@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Printer, ChevronDown } from "lucide-react";
+import { RefreshCw, Printer, ChevronDown, Clock, MapPin, Phone, Bike, ShoppingBag } from "lucide-react";
 import { clsx } from "clsx";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
@@ -19,16 +19,15 @@ const ESTADO_LABEL: Record<Estado, string> = {
   CANCELADO: "Cancelado",
 };
 
-const ESTADO_COLOR: Record<Estado, string> = {
-  PENDIENTE: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  CONFIRMADO: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  EN_PREPARACION: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  LISTO: "bg-green-500/20 text-green-400 border-green-500/30",
-  ENTREGADO: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  CANCELADO: "bg-red-500/20 text-red-400 border-red-500/30",
+const ESTADO_BADGE: Record<Estado, string> = {
+  PENDIENTE:     "bg-amber-100   dark:bg-amber-900/30   text-amber-700   dark:text-amber-400   border border-amber-200   dark:border-amber-700/40",
+  CONFIRMADO:    "bg-sky-100     dark:bg-sky-900/30     text-sky-700     dark:text-sky-400     border border-sky-200     dark:border-sky-700/40",
+  EN_PREPARACION:"bg-orange-100  dark:bg-orange-900/30  text-orange-700  dark:text-orange-400  border border-orange-200  dark:border-orange-700/40",
+  LISTO:         "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/40",
+  ENTREGADO:     "bg-neutral-100 dark:bg-neutral-800    text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700",
+  CANCELADO:     "bg-red-100     dark:bg-red-900/30     text-red-600     dark:text-red-400     border border-red-200     dark:border-red-700/40",
 };
 
-// Estados activos (no terminados) que se muestran por defecto
 const ESTADOS_ACTIVOS: Estado[] = ["PENDIENTE", "CONFIRMADO", "EN_PREPARACION", "LISTO"];
 
 export function PedidosCliente() {
@@ -49,7 +48,6 @@ export function PedidosCliente() {
     }
   }, [filtroEstado]);
 
-  // Polling cada 15 segundos para "tiempo real" sin WebSockets
   useEffect(() => {
     fetchPedidos();
     const interval = setInterval(() => fetchPedidos(true), 15_000);
@@ -67,7 +65,7 @@ export function PedidosCliente() {
       });
       const data = await res.json();
       if (data.ok) {
-        toast.success(`Estado actualizado: ${ESTADO_LABEL[estado]}`);
+        toast.success(`Estado: ${ESTADO_LABEL[estado]}`);
         fetchPedidos(true);
       } else {
         toast.error(data.error);
@@ -98,45 +96,53 @@ export function PedidosCliente() {
       ? pedidos.filter((p) => ESTADOS_ACTIVOS.includes(p.estado as Estado))
       : pedidos;
 
+  const tabs: (Estado | "ACTIVOS")[] = ["ACTIVOS", ...ESTADOS];
+
   return (
     <div className="space-y-6">
+      {/* Encabezado */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Pedidos</h1>
+        <div>
+          <p className="label-caps mb-1">Panel de gestión</p>
+          <h1 className="section-title text-2xl">Pedidos</h1>
+        </div>
         <button
           onClick={() => fetchPedidos()}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white px-3 py-2 rounded-xl hover:bg-gray-800 transition-colors"
+          className="btn-ghost text-sm"
         >
           <RefreshCw size={15} className={cargando ? "animate-spin" : ""} />
           Actualizar
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
-        {(["ACTIVOS", ...ESTADOS] as const).map((e) => (
+      {/* Tabs de filtro */}
+      <div className="card p-1 flex gap-0.5 flex-wrap">
+        {tabs.map((e) => (
           <button
             key={e}
             onClick={() => setFiltroEstado(e)}
             className={clsx(
-              "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150",
               filtroEstado === e
-                ? "bg-orange-500 border-orange-500 text-white"
-                : "border-gray-700 text-gray-400 hover:border-gray-500"
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800"
             )}
           >
-            {e === "ACTIVOS" ? "Activos" : ESTADO_LABEL[e]}
+            {e === "ACTIVOS" ? "Activos" : ESTADO_LABEL[e as Estado]}
           </button>
         ))}
       </div>
 
+      {/* Contenido */}
       {cargando ? (
-        <div className="flex justify-center py-20">
+        <div className="flex justify-center py-24">
           <Spinner className="w-8 h-8 text-orange-500" />
         </div>
       ) : pedidosFiltrados.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-4xl mb-3">🎉</p>
-          <p className="font-medium">No hay pedidos en este estado</p>
+        <div className="card text-center py-20 space-y-3">
+          <p className="text-4xl">🎉</p>
+          <p className="font-semibold text-neutral-700 dark:text-neutral-300">No hay pedidos en este estado</p>
+          <p className="text-sm text-neutral-400">Los nuevos pedidos aparecerán aquí automáticamente</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -173,100 +179,151 @@ function TarjetaPedido({
     minute: "2-digit",
   });
 
-  // Estados posibles siguientes según el estado actual
   const siguientesEstados: Record<Estado, Estado[]> = {
-    PENDIENTE: ["CONFIRMADO", "CANCELADO"],
-    CONFIRMADO: ["EN_PREPARACION", "CANCELADO"],
+    PENDIENTE:      ["CONFIRMADO", "CANCELADO"],
+    CONFIRMADO:     ["EN_PREPARACION", "CANCELADO"],
     EN_PREPARACION: ["LISTO", "CANCELADO"],
-    LISTO: ["ENTREGADO"],
-    ENTREGADO: [],
-    CANCELADO: [],
+    LISTO:          ["ENTREGADO"],
+    ENTREGADO:      [],
+    CANCELADO:      [],
   };
 
+  const esPagadoOnline =
+    pedido.formaPago === "ONLINE" && pedido.estadoPago === "PAGADO";
+  const esPendientePago =
+    pedido.formaPago === "ONLINE" && pedido.estadoPago !== "PAGADO";
+
   return (
-    <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 space-y-3">
+    <div className="card overflow-hidden flex flex-col">
+      {/* Franja de color según estado */}
+      <div
+        className={clsx(
+          "h-1 w-full",
+          estado === "PENDIENTE"      && "bg-amber-400",
+          estado === "CONFIRMADO"     && "bg-sky-400",
+          estado === "EN_PREPARACION" && "bg-orange-400",
+          estado === "LISTO"          && "bg-emerald-400",
+          estado === "ENTREGADO"      && "bg-neutral-300 dark:bg-neutral-700",
+          estado === "CANCELADO"      && "bg-red-400",
+        )}
+      />
+
+      <div className="p-4 space-y-3 flex-1">
+        {/* Número + estado */}
         <div className="flex items-center justify-between">
-          <span className="font-black text-orange-400 text-lg">
+          <span className="font-display font-bold text-orange-500 text-xl tracking-tight">
             #{String(pedido.numeroPedido).padStart(4, "0")}
           </span>
-          <span className={clsx("text-xs font-semibold px-2.5 py-1 rounded-full border", ESTADO_COLOR[estado])}>
+          <span className={clsx("badge text-[10px]", ESTADO_BADGE[estado])}>
             {ESTADO_LABEL[estado]}
           </span>
         </div>
 
-        <div className="space-y-1 text-sm">
-          <p className="font-semibold text-white">{pedido.nombreCliente}</p>
-          <p className="text-gray-400">{pedido.telefono}</p>
-          <div className="flex items-center gap-3 text-gray-500 text-xs">
-            <span>{hora} hs</span>
-            <span className="font-medium text-gray-300">
-              {pedido.tipo === "DELIVERY" ? "🛵 Delivery" : "🏪 Retiro"}
+        {/* Info cliente */}
+        <div className="space-y-1.5">
+          <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-[15px] leading-tight">
+            {pedido.nombreCliente}
+          </p>
+          <div className="flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500 text-xs">
+            <Phone size={11} />
+            <span>{pedido.telefono}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+            <span className="flex items-center gap-1">
+              <Clock size={11} />
+              {hora} hs
             </span>
-            <span>
+            <span className="flex items-center gap-1">
+              {pedido.tipo === "DELIVERY" ? <Bike size={11} /> : <ShoppingBag size={11} />}
+              {pedido.tipo === "DELIVERY" ? "Delivery" : "Retiro"}
+            </span>
+            <span className={clsx(
+              "font-medium",
+              esPagadoOnline && "text-emerald-600 dark:text-emerald-400",
+              esPendientePago && "text-amber-600 dark:text-amber-400",
+            )}>
               {pedido.formaPago === "ONLINE"
-                ? pedido.estadoPago === "PAGADO" ? "💳 Pagado" : "💳 Pendiente"
+                ? esPagadoOnline ? "💳 Pagado" : "💳 Pendiente"
                 : "💵 Contra entrega"}
             </span>
           </div>
           {pedido.tipo === "DELIVERY" && pedido.direccionEntrega && (
-            <p className="text-gray-400 text-xs">📍 {pedido.direccionEntrega}</p>
+            <p className="flex items-start gap-1 text-neutral-400 dark:text-neutral-500 text-xs">
+              <MapPin size={11} className="mt-0.5 flex-shrink-0" />
+              {pedido.direccionEntrega}
+            </p>
           )}
         </div>
 
         {/* Items colapsables */}
-        <button
-          onClick={() => setAbierto(!abierto)}
-          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          <ChevronDown size={14} className={clsx("transition-transform", abierto && "rotate-180")} />
-          {pedido.items.length} producto{pedido.items.length !== 1 && "s"} —{" "}
-          <span className="font-bold text-white">${Number(pedido.total).toLocaleString("es-AR")}</span>
-        </button>
+        <div className="border-t border-neutral-100 dark:border-neutral-800 pt-2.5">
+          <button
+            onClick={() => setAbierto(!abierto)}
+            className="flex items-center justify-between w-full text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
+          >
+            <span className="flex items-center gap-1">
+              <ChevronDown
+                size={13}
+                className={clsx("transition-transform duration-200", abierto && "rotate-180")}
+              />
+              {pedido.items.length} producto{pedido.items.length !== 1 && "s"}
+            </span>
+            <span className="display-price text-sm font-bold text-neutral-900 dark:text-neutral-100">
+              ${Number(pedido.total).toLocaleString("es-AR")}
+            </span>
+          </button>
 
-        {abierto && (
-          <div className="space-y-1 pt-1 border-t border-gray-800">
-            {pedido.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-xs text-gray-400">
-                <span>{item.cantidad}× {item.producto.nombre}</span>
-                <span>${Number(item.subtotal).toLocaleString("es-AR")}</span>
-              </div>
-            ))}
-            {pedido.notas && (
-              <p className="text-xs text-yellow-400 mt-1">📝 {pedido.notas}</p>
-            )}
-          </div>
-        )}
+          {abierto && (
+            <div className="mt-2 space-y-1.5">
+              {pedido.items.map((item) => (
+                <div key={item.id} className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                  <span>
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                      {item.cantidad}×
+                    </span>{" "}
+                    {item.producto.nombre}
+                  </span>
+                  <span className="font-medium">${Number(item.subtotal).toLocaleString("es-AR")}</span>
+                </div>
+              ))}
+              {pedido.notas && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-2 py-1.5 mt-1">
+                  📝 {pedido.notas}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Acciones */}
-      <div className="px-4 pb-4 flex gap-2">
-        {siguientesEstados[estado].map((sig) => (
+      {(siguientesEstados[estado].length > 0 || true) && (
+        <div className="px-4 pb-4 flex gap-2">
+          {siguientesEstados[estado].map((sig) => (
+            <button
+              key={sig}
+              onClick={() => onCambiarEstado(pedido.id, sig)}
+              disabled={actualizando}
+              className={clsx(
+                "flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 disabled:opacity-50",
+                sig === "CANCELADO"
+                  ? "bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
+                  : "bg-orange-500 hover:bg-orange-600 active:scale-[0.97] text-white",
+              )}
+            >
+              {actualizando ? <Spinner className="w-3 h-3 mx-auto" /> : ESTADO_LABEL[sig]}
+            </button>
+          ))}
           <button
-            key={sig}
-            onClick={() => onCambiarEstado(pedido.id, sig)}
+            onClick={() => onReimprimir(pedido.id)}
             disabled={actualizando}
-            className={clsx(
-              "flex-1 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50",
-              sig === "CANCELADO"
-                ? "bg-red-900/50 hover:bg-red-900 text-red-400"
-                : "bg-orange-500 hover:bg-orange-600 text-white"
-            )}
+            title="Reimprimir ticket"
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
-            {actualizando ? <Spinner className="w-3 h-3 mx-auto" /> : ESTADO_LABEL[sig]}
+            <Printer size={15} />
           </button>
-        ))}
-        <button
-          onClick={() => onReimprimir(pedido.id)}
-          disabled={actualizando}
-          title="Reimprimir ticket"
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-        >
-          <Printer size={15} />
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
-
