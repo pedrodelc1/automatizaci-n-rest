@@ -4,9 +4,13 @@ import { imprimirTicket } from "@/lib/printer";
 import { esAdminAutorizado } from "@/lib/admin-auth";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!esAdminAutorizado(req)) {
+    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
+  }
+
   const id = parseInt(params.id);
   if (isNaN(id)) {
     return NextResponse.json({ ok: false, error: "ID inválido" }, { status: 400 });

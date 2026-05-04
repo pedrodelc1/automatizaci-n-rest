@@ -159,21 +159,33 @@ N8N_WEBHOOK_DUENO_URL  ← URL webhook N8N para alertas al dueño
 
 ---
 
-## N8N + WhatsApp — FUNCIONANDO ✓
+## N8N + WhatsApp
 - WhatsApp via **WAHA NOWEB** desplegado en Railway
-- URL WAHA: `https://evolution-api-production-3285.up.railway.app`
+- URL WAHA real: `https://waha-production-cf74.up.railway.app` (el nombre del servicio en Railway dice "evolution-api" pero es WAHA)
+- WAHA API sendText: `https://waha-production-cf74.up.railway.app/api/sendText`
+- WAHA dashboard: `https://waha-production-cf74.up.railway.app/dashboard`
 - API Key WAHA: `a552c6bf017545aa99fc7153d0aa4960`
 - N8N desplegado en Railway: `https://n8n-production-b044.up.railway.app`
 - N8N tiene PostgreSQL propio para persistencia
 - **Los datos llegan CON wrapper `.body`** — usar `$json.body.evento` y `$json.body.pedido` en los nodos de n8n
-- Tres workflows activos:
-  1. `workflow-whatsapp-cliente.json` → path `/webhook/restaurante-eventos` → mensajes al cliente por cambios de estado
-  2. `workflow-alerta-dueno.json` → path `/webhook/restaurante-alertas` → alertas al dueño (Pedro: 5493416600928)
+- Tres workflows:
+  1. `workflow-whatsapp-cliente.json` → path `/webhook/restaurante-eventos` → mensajes al cliente ✅
+  2. `workflow-alerta-dueno.json` → path `/webhook/restaurante-alertas` → alertas al dueño ⚠️ ver abajo
   3. `workflow-respuesta-automatica.json` → path `/webhook/whatsapp-entrante` → bot respuesta automática
 - **Bot respuesta automática:** cuando alguien escribe por WhatsApp, responde con el link al menú. Cooldown de 2 horas por contacto (usando `$getWorkflowStaticData`). Filtra grupos y mensajes propios.
 - Para que WAHA reenvíe los mensajes entrantes a N8N, configurar env var en Railway: `WHATSAPP_DEFAULT_WEBHOOK_URL=https://n8n-production-b044.up.railway.app/webhook/whatsapp-entrante`
 - Formato teléfono Argentina: `549` + código de área + número sin 0 ni 15 + `@c.us`
 - `notificaciones.ts` envía a DOS URLs: `N8N_WEBHOOK_URL` (cliente) y `N8N_WEBHOOK_DUENO_URL` (dueño)
+
+### Variables de entorno — dónde van
+- `N8N_WEBHOOK_URL` y `N8N_WEBHOOK_DUENO_URL` van en el servicio **automatizacion-rest** (la app Next.js), NO en el servicio de N8N
+- N8N no necesita esas variables para nada
+
+### Problema conocido — WAHA pierde sesión
+- Railway plan gratuito no tiene volúmenes → WAHA pierde la sesión de WhatsApp en cada reinicio
+- Solución: actualizar a Railway Hobby ($5/mes) → agregar volumen en servicio WAHA con mount path `/app/.sessions`
+- Variables ya configuradas en WAHA: `WAHA_AUTO_START_SESSIONS=default`, `WAHA_DASHBOARD_USERNAME`, `WAHA_DASHBOARD_PASSWORD`
+- Sin el volumen, hay que escanear el QR manualmente después de cada reinicio del contenedor
 
 ---
 
@@ -193,6 +205,28 @@ N8N_WEBHOOK_DUENO_URL  ← URL webhook N8N para alertas al dueño
 - Cada restaurante tiene su propio Railway project, DB, .env, contraseña admin
 - La contraseña admin se genera con `openssl rand -base64 12`
 - Para cambiar de MP a Stripe: comentar `MP_ACCESS_TOKEN` en `.env` y descomentar `STRIPE_SECRET_KEY`
+
+## Impresora térmica de cocina
+
+### Estado actual
+- `src/lib/printer.ts` usa `node-thermal-printer` — envía comandos ESC/POS por TCP/IP al `PRINTER_IP:PRINTER_PORT`
+- Si la impresora no está disponible, encola el pedido y reintenta cada 60 segundos
+- El comando de reimpresión (`POST /api/pedidos/[id]`) llama a `imprimirTicket()` directamente
+
+### Testing en casa (impresora común, no térmica)
+- `node-thermal-printer` envía comandos ESC/POS raw vía TCP — una impresora USB/WiFi hogareña **no** los acepta
+- **Solución para testear:** agregar endpoint `GET /api/pedidos/[id]/ticket` que devuelve HTML del ticket → se imprime con Ctrl+P desde cualquier impresora
+- Este endpoint también sirve como fallback real para restaurantes sin impresora térmica
+- **Pendiente implementar:** el HTML-ticket / modo fallback cuando `PRINTER_IP` no está configurado
+
+### Para producción con impresora térmica real
+- Impresoras compatibles: cualquier ESC/POS con interfaz de red (Epson TM serie, Bixolon, Xprinter)
+- Deben estar en la **misma red local** que el servidor (o Railway puede no alcanzarlas → ver notas abajo)
+- **Problema de red en Railway:** Railway está en la nube — no puede conectarse a una impresora en la red local del restaurante vía TCP directo
+- **Solución real para producción:** un pequeño script Node.js corriendo en una PC/Raspberry Pi dentro del restaurante que haga polling a `/api/pedidos?estado=CONFIRMADO` y dispare la impresión local
+- Alternativamente: configurar un tunnel (ngrok/Cloudflare tunnel) para exponer el puerto de la impresora — más frágil
+
+---
 
 ## Comandos útiles
 ```bash
@@ -220,9 +254,10 @@ npm run db:migrate   # Crear y aplicar migración formal
 - [ ] **Configurar webhook de MP** — en el panel de MercadoPago configurar `https://automatizaci-n-rest-production.up.railway.app/api/webhooks/mercadopago`
 
 ### Importantes
-- [ ] **Rediseño UI del admin** — `/admin/login`, `/admin/pedidos`, `/admin/menu` usan estilos básicos, llevarlos al mismo nivel que el menú público
-- [ ] **Personalización por restaurante** — nombre, logo, dirección, horario via env vars o `src/config/restaurante.ts`
-- [ ] **Horarios de apertura** — "Abierto ahora · Cierra a las 23:00" está hardcodeado en `page.tsx`
+- [x] **Rediseño UI del admin** — `/admin/login`, `/admin/pedidos`, `/admin/menu` ✅ completado
+- [ ] **`src/config/restaurante.ts`** — ⭐ PRÓXIMO PASO: centralizar nombre, logo, dirección, teléfono, horarios en env vars para poder entregar a nuevos clientes sin tocar código
+- [ ] **Horarios de apertura dinámicos** — "Abierto ahora · Cierra a las 23:00" hardcodeado en `page.tsx`, leer de env vars
+- [ ] **Fallback HTML impresora** — endpoint `/admin/pedidos/[id]/ticket` para imprimir desde cualquier impresora con Ctrl+P
 
 ### Nice to have
 - [ ] Dominio propio por restaurante

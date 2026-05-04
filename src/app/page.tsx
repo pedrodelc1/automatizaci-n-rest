@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { TarjetaProducto } from "@/components/menu/TarjetaProducto";
 import { BotonCarrito } from "@/components/ui/BotonCarrito";
 import { MapPin, Clock, Star } from "lucide-react";
+import { restaurante, getEstadoHorario } from "@/config/restaurante";
 
 export const revalidate = 60;
 
@@ -21,7 +22,8 @@ async function getMenu() {
 export default async function MenuPage() {
   const categorias = await getMenu();
   const cats = categorias.filter((c) => c.productos.length > 0);
-  const nombre = process.env.RESTAURANTE_NOMBRE ?? "El Restaurante";
+  const { nombre, emoji, direccion, tiempoDelivery, tiempoRetiro } = restaurante;
+  const horario = getEstadoHorario();
 
   return (
     <div className="min-h-screen bg-cream-50 dark:bg-[#0D0C0A] pb-36">
@@ -52,7 +54,7 @@ export default async function MenuPage() {
                 className="w-[72px] h-[72px] bg-white rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 select-none"
                 style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15)" }}
               >
-                🍽️
+                {emoji}
               </div>
               <div className="pt-1">
                 <h1 className="font-display text-[2.1rem] font-bold text-white leading-none tracking-[-0.02em]">
@@ -73,8 +75,8 @@ export default async function MenuPage() {
           {/* Chips */}
           <div className="flex items-center gap-2 mt-6 flex-wrap">
             {[
-              { icon: "🛵", text: "Delivery ~45 min" },
-              { icon: "🏪", text: "Retiro ~20 min" },
+              { icon: "🛵", text: `Delivery ~${tiempoDelivery} min` },
+              { icon: "🏪", text: `Retiro ~${tiempoRetiro} min` },
             ].map((c) => (
               <span
                 key={c.text}
@@ -85,16 +87,16 @@ export default async function MenuPage() {
               </span>
             ))}
             <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/20 text-white"
-              style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
+              className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border text-white ${horario.abierto ? "border-white/20" : "border-red-300/40 bg-red-900/30"}`}
+              style={horario.abierto ? { background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" } : {}}
             >
-              <Clock size={10} /> Abierto ahora
+              <Clock size={10} /> {horario.abierto ? horario.etiqueta : `Cerrado · ${horario.etiqueta}`}
             </span>
             <span
               className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/20 text-white"
               style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
             >
-              <MapPin size={10} /> Corrientes 1234
+              <MapPin size={10} /> {direccion}
             </span>
           </div>
         </div>

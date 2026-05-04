@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { imprimirTicket } from "@/lib/printer";
 import { notificar } from "@/lib/notificaciones";
 import { esAdminAutorizado } from "@/lib/admin-auth";
-import { FormaPago, TipoPedido } from "@prisma/client";
+import { EstadoPedido, FormaPago, TipoPedido } from "@prisma/client";
 import { COOKIE_CARRITO, obtenerSesionActiva } from "@/lib/carrito-sesion";
 
 const crearPedidoSchema = z
@@ -137,21 +137,34 @@ export async function POST(req: NextRequest) {
   }
 }
 
+const querySchema = z.object({
+  estado: z.nativeEnum(EstadoPedido).optional(),
+  tipo: z.nativeEnum(TipoPedido).optional(),
+});
+
 // GET /api/pedidos — para el panel de admin
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const estado = searchParams.get("estado");
-  const tipo = searchParams.get("tipo");
-
   if (!esAdminAutorizado(req)) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const parsed = querySchema.safeParse({
+    estado: searchParams.get("estado") ?? undefined,
+    tipo: searchParams.get("tipo") ?? undefined,
+  });
+
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: "Parámetros inválidos" }, { status: 400 });
+  }
+
+  const { estado, tipo } = parsed.data;
+
   try {
     const pedidos = await prisma.pedido.findMany({
       where: {
-        ...(estado && { estado: estado as never }),
-        ...(tipo && { tipo: tipo as never }),
+        ...(estado && { estado }),
+        ...(tipo && { tipo }),
       },
       include: { items: { include: { producto: true } } },
       orderBy: { creadoEn: "desc" },

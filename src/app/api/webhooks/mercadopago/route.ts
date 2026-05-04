@@ -10,9 +10,13 @@ import { notificar } from "@/lib/notificaciones";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function validarFirma(req: NextRequest, rawBody: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET;
-  // Si no hay secret configurado, salteamos la validación (solo en dev)
+
   if (!secret) {
-    console.warn("[Webhook MP] MP_WEBHOOK_SECRET no configurado — omitiendo validación");
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Webhook MP] MP_WEBHOOK_SECRET requerido en producción — request rechazado");
+      return false;
+    }
+    console.warn("[Webhook MP] MP_WEBHOOK_SECRET no configurado — omitiendo validación en desarrollo");
     return true;
   }
 

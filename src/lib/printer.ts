@@ -112,7 +112,14 @@ async function buildTicket(
   // Estado de pago
   if (pedido.formaPago === FormaPago.ONLINE) {
     const pagado = pedido.estadoPago === EstadoPago.PAGADO;
-    printer.println(`PAGO: Online (${pagado ? "Pagado ✓" : "Pendiente ⚠"})`);
+    printer.println(`PAGO: Online (${pagado ? "Pagado OK" : "Pendiente"})`);
+  } else if (pedido.formaPago === FormaPago.EFECTIVO) {
+    const montoStr = pedido.montoCon ? ` - paga con $${Number(pedido.montoCon).toLocaleString("es-AR")}` : "";
+    printer.println(`PAGO: Efectivo${montoStr}`);
+  } else if (pedido.formaPago === FormaPago.TARJETA_DEBITO) {
+    printer.println("PAGO: Tarjeta debito al recibir");
+  } else if (pedido.formaPago === FormaPago.TARJETA_CREDITO) {
+    printer.println("PAGO: Tarjeta credito al recibir");
   } else {
     printer.println("PAGO: Efectivo/Posnet contra entrega");
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, Printer, ChevronDown, Clock, MapPin, Phone, Bike, ShoppingBag } from "lucide-react";
+import { RefreshCw, Printer, ChevronDown, Clock, MapPin, Phone, Bike, ShoppingBag, FileText } from "lucide-react";
 import { clsx } from "clsx";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
@@ -244,6 +244,12 @@ function TarjetaPedido({
             )}>
               {pedido.formaPago === "ONLINE"
                 ? esPagadoOnline ? "💳 Pagado" : "💳 Pendiente"
+                : pedido.formaPago === "EFECTIVO"
+                ? "💵 Efectivo"
+                : pedido.formaPago === "TARJETA_DEBITO"
+                ? "💳 Débito"
+                : pedido.formaPago === "TARJETA_CREDITO"
+                ? "💳 Crédito"
                 : "💵 Contra entrega"}
             </span>
           </div>
@@ -317,11 +323,20 @@ function TarjetaPedido({
           <button
             onClick={() => onReimprimir(pedido.id)}
             disabled={actualizando}
-            title="Reimprimir ticket"
+            title="Reimprimir ticket térmico"
             className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
             <Printer size={15} />
           </button>
+          <a
+            href={`/api/admin/pedidos/${pedido.id}/ticket`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Imprimir ticket HTML (Ctrl+P)"
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <FileText size={15} />
+          </a>
         </div>
       )}
     </div>
