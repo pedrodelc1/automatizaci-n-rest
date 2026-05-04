@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { TarjetaProducto } from "@/components/menu/TarjetaProducto";
 import { BotonCarrito } from "@/components/ui/BotonCarrito";
-import { AccesoAdmin } from "@/components/ui/AccesoAdmin";
 import { MapPin, Clock, Star } from "lucide-react";
 
 export const revalidate = 60;
@@ -69,7 +68,6 @@ export default async function MenuPage() {
                 </div>
               </div>
             </div>
-            <AccesoAdmin />
           </div>
 
           {/* Chips */}
