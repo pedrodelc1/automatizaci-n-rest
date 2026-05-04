@@ -84,7 +84,15 @@ export function MenuAdmin() {
       method,
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ ...data, precio: Number(data.precio) }),
+      body: JSON.stringify({
+        nombre: data.nombre,
+        descripcion: data.descripcion ?? undefined,
+        precio: Number(data.precio),
+        imagenUrl: data.imagenUrl ?? "",
+        categoriaId: data.categoriaId,
+        disponible: data.disponible,
+        destacado: data.destacado,
+      }),
     });
     const result = await res.json();
     setGuardando(false);

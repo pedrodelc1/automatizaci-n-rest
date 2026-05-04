@@ -27,7 +27,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   try {
     const producto = await prisma.producto.update({
       where: { id },
-      data: parsed.data,
+      data: {
+        ...parsed.data,
+        imagenUrl: parsed.data.imagenUrl === "" ? null : parsed.data.imagenUrl,
+      },
     });
     return NextResponse.json({ ok: true, data: producto });
   } catch {
