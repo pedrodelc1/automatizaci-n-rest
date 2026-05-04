@@ -30,8 +30,9 @@ model Producto {
   creadoEn      DateTime   @default(now()) @map("creado_en")
   actualizadoEn DateTime   @updatedAt @map("actualizado_en")
 
-  categoria Categoria    @relation(fields: [categoriaId], references: [id])
-  items     ItemPedido[]
+  categoria          Categoria           @relation(fields: [categoriaId], references: [id])
+  items              ItemPedido[]
+  itemsCarritoSesion ItemCarritoSesion[]
 
   @@map("productos")
 }
@@ -100,4 +101,25 @@ enum EstadoPago {
   PENDIENTE
   PAGADO
   FALLIDO
+}
+
+model SesionCarrito {
+  id       String              @id @default(cuid())
+  expiraEn DateTime            @map("expira_en")
+  items    ItemCarritoSesion[]
+
+  @@map("sesiones_carrito")
+}
+
+model ItemCarritoSesion {
+  id         Int           @id @default(autoincrement())
+  sesionId   String        @map("sesion_id")
+  productoId Int           @map("producto_id")
+  cantidad   Int
+  notasItem  String?       @map("notas_item") @db.Text
+  sesion     SesionCarrito @relation(fields: [sesionId], references: [id], onDelete: Cascade)
+  producto   Producto      @relation(fields: [productoId], references: [id])
+
+  @@unique([sesionId, productoId])
+  @@map("items_sesion_carrito")
 }

@@ -57,11 +57,6 @@ export default function CarritoPage() {
           direccionEntrega: modalidad === "DELIVERY" ? form.direccionEntrega : undefined,
           formaPago,
           notas: form.notas || undefined,
-          items: items.map((i) => ({
-            productoId: i.producto.id,
-            cantidad: i.cantidad,
-            notasItem: i.notasItem || undefined,
-          })),
         }),
       });
 

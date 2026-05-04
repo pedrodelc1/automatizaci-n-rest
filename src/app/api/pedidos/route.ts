@@ -5,12 +5,7 @@ import { imprimirTicket } from "@/lib/printer";
 import { notificar } from "@/lib/notificaciones";
 import { esAdminAutorizado } from "@/lib/admin-auth";
 import { FormaPago, TipoPedido } from "@prisma/client";
-
-const itemSchema = z.object({
-  productoId: z.number().int().positive(),
-  cantidad: z.number().int().min(1).max(50),
-  notasItem: z.string().max(200).optional(),
-});
+import { COOKIE_CARRITO, obtenerSesionActiva } from "@/lib/carrito-sesion";
 
 const crearPedidoSchema = z
   .object({
@@ -21,7 +16,6 @@ const crearPedidoSchema = z
     direccionEntrega: z.string().max(300).optional(),
     formaPago: z.nativeEnum(FormaPago),
     notas: z.string().max(500).optional(),
-    items: z.array(itemSchema).min(1).max(50),
   })
   .refine(
     (data) =>
@@ -42,11 +36,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { tipo, nombreCliente, telefono, email, direccionEntrega, formaPago, notas, items } =
+    const { tipo, nombreCliente, telefono, email, direccionEntrega, formaPago, notas } =
       parsed.data;
 
+    // Leer items del carrito server-side (nunca del body del cliente)
+    const sesionId = req.cookies.get(COOKIE_CARRITO)?.value;
+    const sesion = await obtenerSesionActiva(sesionId);
+    if (!sesion) {
+      return NextResponse.json(
+        { ok: false, error: "Carrito no encontrado o expirado" },
+        { status: 400 }
+      );
+    }
+
+    const carritoItems = await prisma.itemCarritoSesion.findMany({
+      where: { sesionId: sesion.id },
+    });
+
+    if (carritoItems.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: "El carrito está vacío" },
+        { status: 400 }
+      );
+    }
+
     // Verificar que todos los productos existen y están disponibles
-    const productoIds = items.map((i) => i.productoId);
+    const productoIds = carritoItems.map((i) => i.productoId);
     const productos = await prisma.producto.findMany({
       where: { id: { in: productoIds }, disponible: true },
     });
@@ -58,15 +73,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calcular totales con precios actuales de la BD
+    // Calcular totales con precios actuales de la BD (nunca con precios del cliente)
     const productoMap = new Map(productos.map((p) => [p.id, p]));
-    const itemsConPrecio = items.map((item) => {
+    const itemsConPrecio = carritoItems.map((item) => {
       const prod = productoMap.get(item.productoId)!;
       const precioUnitario = prod.precio.toNumber();
       return {
         productoId: item.productoId,
         cantidad: item.cantidad,
-        notasItem: item.notasItem,
+        notasItem: item.notasItem ?? undefined,
         precioUnitario,
         subtotal: precioUnitario * item.cantidad,
       };

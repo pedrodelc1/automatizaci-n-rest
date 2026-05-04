@@ -1,0 +1,15 @@
+DATABASE_URL=postgresql://postgres:EfBbOVsAcNTwdbhqIXurAIQZbjwSPidP@shinkansen.proxy.rlwy.net:49982/railway
+MP_ACCESS_TOKEN=APP_USR-4822462245809612-042716-06adc5139ada55678f47d7213db8a110-3362674567
+MP_PUBLIC_KEY=APP_USR-3e5481da-c252-431b-b25a-3f793d81c2f2
+MP_WEBHOOK_SECRET=tu_webhook_secret_aqui
+PRINTER_IP=192.168.1.100
+PRINTER_PORT=9100
+ADMIN_PASSWORD=admin123
+NEXT_PUBLIC_BASE_URL=https://automatizaci-n-rest-production.up.railway.app
+PORT=3000
+NIXPACKS_NODE_VERSION=22
+TIEMPO_ESTIMADO_DELIVERY=45
+TIEMPO_ESTIMADO_RETIRO=20
+RESTAURANTE_NOMBRE=El Restaurante
+N8N_WEBHOOK_URL=https://n8n-production-b044.up.railway.app/webhook/restaurante-eventos
+N8N_WEBHOOK_DUENO_URL=https://n8n-production-b044.up.railway.app/webhook/restaurante-alertas

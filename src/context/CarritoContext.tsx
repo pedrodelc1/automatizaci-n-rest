@@ -1,63 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useReducer, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { type Producto } from "@prisma/client";
 
 export interface ItemCarrito {
   producto: Producto;
   cantidad: number;
-  notasItem?: string;
-}
-
-interface CarritoState {
-  items: ItemCarrito[];
-}
-
-type CarritoAction =
-  | { type: "AGREGAR"; producto: Producto }
-  | { type: "QUITAR"; productoId: number }
-  | { type: "CAMBIAR_CANTIDAD"; productoId: number; cantidad: number }
-  | { type: "ACTUALIZAR_NOTAS"; productoId: number; notas: string }
-  | { type: "VACIAR" };
-
-function carritoReducer(state: CarritoState, action: CarritoAction): CarritoState {
-  switch (action.type) {
-    case "AGREGAR": {
-      const existe = state.items.find((i) => i.producto.id === action.producto.id);
-      if (existe) {
-        return {
-          items: state.items.map((i) =>
-            i.producto.id === action.producto.id
-              ? { ...i, cantidad: i.cantidad + 1 }
-              : i
-          ),
-        };
-      }
-      return { items: [...state.items, { producto: action.producto, cantidad: 1 }] };
-    }
-    case "QUITAR":
-      return { items: state.items.filter((i) => i.producto.id !== action.productoId) };
-    case "CAMBIAR_CANTIDAD": {
-      if (action.cantidad <= 0) {
-        return { items: state.items.filter((i) => i.producto.id !== action.productoId) };
-      }
-      return {
-        items: state.items.map((i) =>
-          i.producto.id === action.productoId ? { ...i, cantidad: action.cantidad } : i
-        ),
-      };
-    }
-    case "ACTUALIZAR_NOTAS":
-      return {
-        items: state.items.map((i) =>
-          i.producto.id === action.productoId ? { ...i, notasItem: action.notas } : i
-        ),
-      };
-    case "VACIAR":
-      return { items: [] };
-    default:
-      return state;
-  }
+  notasItem?: string | null;
 }
 
 interface CarritoContextType {
@@ -73,25 +22,91 @@ interface CarritoContextType {
 
 const CarritoContext = createContext<CarritoContextType | null>(null);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapItems(data: any[]): ItemCarrito[] {
+  return data.map((i) => ({
+    producto: i.producto,
+    cantidad: i.cantidad,
+    notasItem: i.notasItem,
+  }));
+}
+
 export function CarritoProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(carritoReducer, { items: [] }, (initial) => {
-    // Hidratar desde localStorage al montar
-    if (typeof window === "undefined") return initial;
-    try {
-      const saved = localStorage.getItem("carrito");
-      return saved ? JSON.parse(saved) : initial;
-    } catch {
-      return initial;
-    }
-  });
+  const [items, setItems] = useState<ItemCarrito[]>([]);
 
-  // Persistir en localStorage ante cualquier cambio
+  // Cargar carrito al montar
   useEffect(() => {
-    localStorage.setItem("carrito", JSON.stringify(state));
-  }, [state]);
+    fetch("/api/carrito")
+      .then((r) => r.json())
+      .then((d) => { if (d.ok) setItems(mapItems(d.data)); })
+      .catch(() => {});
+  }, []);
 
-  const totalItems = state.items.reduce((sum, i) => sum + i.cantidad, 0);
-  const totalPrecio = state.items.reduce(
+  // Sincroniza el estado local con la respuesta del servidor
+  const sync = useCallback(async (fn: () => Promise<Response>) => {
+    try {
+      const res = await fn();
+      const data = await res.json();
+      if (data.ok) setItems(mapItems(data.data));
+    } catch {}
+  }, []);
+
+  const agregar = useCallback(
+    (producto: Producto) => {
+      sync(() =>
+        fetch("/api/carrito", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productoId: producto.id }),
+        })
+      );
+    },
+    [sync]
+  );
+
+  const quitar = useCallback(
+    (productoId: number) => {
+      sync(() => fetch(`/api/carrito/${productoId}`, { method: "DELETE" }));
+    },
+    [sync]
+  );
+
+  const cambiarCantidad = useCallback(
+    (productoId: number, cantidad: number) => {
+      if (cantidad <= 0) {
+        quitar(productoId);
+        return;
+      }
+      sync(() =>
+        fetch(`/api/carrito/${productoId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cantidad }),
+        })
+      );
+    },
+    [sync, quitar]
+  );
+
+  const actualizarNotas = useCallback(
+    (productoId: number, notas: string) => {
+      sync(() =>
+        fetch(`/api/carrito/${productoId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notasItem: notas }),
+        })
+      );
+    },
+    [sync]
+  );
+
+  const vaciar = useCallback(() => {
+    sync(() => fetch("/api/carrito", { method: "DELETE" }));
+  }, [sync]);
+
+  const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0);
+  const totalPrecio = items.reduce(
     (sum, i) => sum + Number(i.producto.precio) * i.cantidad,
     0
   );
@@ -99,16 +114,14 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   return (
     <CarritoContext.Provider
       value={{
-        items: state.items,
+        items,
         totalItems,
         totalPrecio,
-        agregar: (producto) => dispatch({ type: "AGREGAR", producto }),
-        quitar: (productoId) => dispatch({ type: "QUITAR", productoId }),
-        cambiarCantidad: (productoId, cantidad) =>
-          dispatch({ type: "CAMBIAR_CANTIDAD", productoId, cantidad }),
-        actualizarNotas: (productoId, notas) =>
-          dispatch({ type: "ACTUALIZAR_NOTAS", productoId, notas }),
-        vaciar: () => dispatch({ type: "VACIAR" }),
+        agregar,
+        quitar,
+        cambiarCantidad,
+        actualizarNotas,
+        vaciar,
       }}
     >
       {children}

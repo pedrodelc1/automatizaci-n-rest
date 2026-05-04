@@ -207,9 +207,17 @@ npm run db:migrate   # Crear y aplicar migración formal
 
 ## Pendiente / próximos pasos
 
+### Estado del deploy (actualizado 2026-05-03)
+- **App Next.js:** deployada en Railway — `https://automatizaci-n-rest-production.up.railway.app`
+- **N8N:** `https://n8n-production-b044.up.railway.app` — workflows "Restaurante — WhatsApp al cliente" y "Restaurante — Alertas al dueño" activos (Published)
+- **WAHA:** `https://waha-production-cf74.up.railway.app` — sesión `default` conectada con cuenta WP Business de Pedro
+- **Variables Railway necesarias:** `NIXPACKS_NODE_VERSION=22`, `PORT=3000`, `NEXT_PUBLIC_BASE_URL`, `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_DUENO_URL` y resto del .env
+- **Problema conocido:** WAHA pierde la sesión al reiniciar — hay que agregar `WAHA_AUTO_START_SESSIONS=default` en variables de Railway del servicio WAHA
+
 ### Bloqueantes
-- [ ] **Deploy de la app Next.js en Railway** — una vez deployado, actualizar `NEXT_PUBLIC_BASE_URL` y configurar webhook de MP con la URL pública
-- [ ] **Actualizar URL en workflow N8N** — `workflow-respuesta-automatica.json` tiene `http://localhost:3000` hardcodeado, cambiarlo a la URL Railway
+- [ ] **Verificar que llegan pedidos a n8n** — la app está en Railway pero hay que confirmar que los webhooks de n8n reciben los eventos correctamente
+- [ ] **Actualizar URL en workflow N8N** — `workflow-respuesta-automatica.json` tiene `http://localhost:3000` hardcodeado, cambiarlo a `https://automatizaci-n-rest-production.up.railway.app`
+- [ ] **Configurar webhook de MP** — en el panel de MercadoPago configurar `https://automatizaci-n-rest-production.up.railway.app/api/webhooks/mercadopago`
 
 ### Importantes
 - [ ] **Rediseño UI del admin** — `/admin/login`, `/admin/pedidos`, `/admin/menu` usan estilos básicos, llevarlos al mismo nivel que el menú público
