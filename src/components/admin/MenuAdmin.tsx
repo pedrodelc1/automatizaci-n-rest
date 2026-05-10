@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Upload, X, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, Upload, X, ImageIcon, Pause, Play } from "lucide-react";
 import { clsx } from "clsx";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
@@ -20,6 +20,7 @@ interface Producto {
   nombre: string;
   descripcion: string | null;
   precio: string;
+  precioCarrito: string | null;
   imagenUrl: string | null;
   categoriaId: number;
   disponible: boolean;
@@ -88,6 +89,7 @@ export function MenuAdmin() {
         nombre: data.nombre,
         descripcion: data.descripcion ?? undefined,
         precio: Number(data.precio),
+        precioCarrito: data.precioCarrito ? Number(data.precioCarrito) : null,
         imagenUrl: data.imagenUrl ?? "",
         categoriaId: data.categoriaId,
         disponible: data.disponible,
@@ -160,20 +162,39 @@ export function MenuAdmin() {
       ) : tab === "productos" ? (
         <div className="space-y-2">
           {productos.map((p) => (
-            <div key={p.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex items-center gap-4">
+            <div key={p.id} className={clsx(
+              "rounded-xl border p-4 flex items-center gap-4 transition-colors",
+              p.disponible
+                ? "bg-gray-900 border-gray-800"
+                : "bg-gray-900/50 border-amber-900/40"
+            )}>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-white truncate">{p.nombre}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className={clsx("font-semibold truncate", p.disponible ? "text-white" : "text-gray-500")}>{p.nombre}</p>
                   {p.destacado && <Star size={13} className="text-yellow-400 flex-shrink-0" fill="currentColor" />}
-                  {!p.disponible && <span className="text-xs text-red-400 font-medium">No disponible</span>}
+                  {!p.disponible && (
+                    <span className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                      <Pause size={10} fill="currentColor" /> PAUSADO
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">{p.categoria.nombre}</p>
               </div>
-              <span className="font-bold text-orange-400">${Number(p.precio).toLocaleString("es-AR")}</span>
+              <span className={clsx("font-bold", p.disponible ? "text-orange-400" : "text-gray-600")}>
+                ${Number(p.precio).toLocaleString("es-AR")}
+              </span>
               <div className="flex items-center gap-1">
-                <button onClick={() => toggleDisponible(p)} title={p.disponible ? "Desactivar" : "Activar"}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
-                  {p.disponible ? <Eye size={15} /> : <EyeOff size={15} />}
+                <button
+                  onClick={() => toggleDisponible(p)}
+                  title={p.disponible ? "Pausar — desaparece del menú online" : "Reanudar — vuelve a aparecer en el menú"}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                    p.disponible
+                      ? "text-amber-400 hover:bg-amber-400/10 hover:text-amber-300"
+                      : "text-emerald-400 hover:bg-emerald-400/10 hover:text-emerald-300"
+                  )}
+                >
+                  {p.disponible ? <><Pause size={13} />Pausar</> : <><Play size={13} />Reanudar</>}
                 </button>
                 <button onClick={() => setModalProducto(p)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
@@ -397,6 +418,18 @@ function FormProducto({ inicial, categorias, guardando, onGuardar, onCancelar }:
       <input className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500" placeholder="Nombre *" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} required />
       <textarea className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500 resize-none" placeholder="Descripción" rows={2} value={form.descripcion ?? ""} onChange={(e) => set("descripcion", e.target.value)} />
       <input className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500" placeholder="Precio *" type="number" min="0" step="1" value={form.precio ?? ""} onChange={(e) => set("precio", e.target.value)} required />
+      <div className="space-y-1">
+        <input
+          className="input bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+          placeholder="Precio exclusivo del carrito (opcional)"
+          type="number"
+          min="0"
+          step="1"
+          value={form.precioCarrito ?? ""}
+          onChange={(e) => set("precioCarrito", e.target.value || null)}
+        />
+        <p className="text-xs text-gray-600 ml-1">Si lo completás, aparece como promo en el carrito del cliente</p>
+      </div>
       <SubidorImagen valor={form.imagenUrl ?? ""} onChange={(url) => set("imagenUrl", url)} />
       <select className="input bg-gray-800 border-gray-700 text-white" value={form.categoriaId ?? ""} onChange={(e) => set("categoriaId", parseInt(e.target.value))} required>
         <option value="">Seleccioná una categoría *</option>

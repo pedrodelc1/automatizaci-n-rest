@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ClipboardList, UtensilsCrossed, LogOut, Store } from "lucide-react";
+import { ClipboardList, UtensilsCrossed, LogOut, Store, LayoutDashboard, Tag } from "lucide-react";
 import { clsx } from "clsx";
 
 const links = [
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/menu", label: "Menú", icon: UtensilsCrossed },
+  { href: "/admin/precios", label: "Precios", icon: Tag },
 ];
 
 export function AdminNav() {

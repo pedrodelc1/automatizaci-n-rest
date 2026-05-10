@@ -113,11 +113,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calcular totales con precios actuales de la BD (nunca con precios del cliente)
+    // Calcular totales con precios de la BD
+    // Si el item es cross-sell y tiene precioCarrito, aplicar el precio promocional
     const productoMap = new Map(productos.map((p) => [p.id, p]));
     const itemsConPrecio = carritoItems.map((item) => {
       const prod = productoMap.get(item.productoId)!;
-      const precioUnitario = prod.precio.toNumber();
+      const pCarrito = prod.precioCarrito?.toNumber() ?? null;
+      const precioUnitario =
+        item.esCrossSell && pCarrito !== null && pCarrito < prod.precio.toNumber()
+          ? pCarrito
+          : prod.precio.toNumber();
       return {
         productoId: item.productoId,
         cantidad: item.cantidad,

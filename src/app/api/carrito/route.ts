@@ -10,6 +10,7 @@ import {
 
 const addSchema = z.object({
   productoId: z.number().int().positive(),
+  esCrossSell: z.boolean().default(false),
 });
 
 async function itemsConProducto(sesionId: string) {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { productoId } = parsed.data;
+  const { productoId, esCrossSell } = parsed.data;
 
   const producto = await prisma.producto.findFirst({
     where: { id: productoId, disponible: true },
@@ -64,7 +65,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.itemCarritoSesion.upsert({
     where: { sesionId_productoId: { sesionId: sesion.id, productoId } },
-    create: { sesionId: sesion.id, productoId, cantidad: 1 },
+    // Si es cross-sell y el item no existía, marcarlo; si ya existía, no cambiar el flag
+    create: { sesionId: sesion.id, productoId, cantidad: 1, esCrossSell },
     update: { cantidad: { increment: 1 } },
   });
 

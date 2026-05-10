@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ElementType } from "react";
 import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, ChevronRight, CreditCard, Banknote, Truck, Store, Wallet } from "lucide-react";
 import { useCarrito } from "@/context/CarritoContext";
+import { CrossSelling } from "@/components/carrito/CrossSelling";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";
@@ -24,7 +25,7 @@ interface FormData {
 
 export default function CarritoPage() {
   const router = useRouter();
-  const { items, totalPrecio, cambiarCantidad, vaciar } = useCarrito();
+  const { items, totalPrecio, cambiarCantidad, vaciar, refetch } = useCarrito();
 
   const [modalidad, setModalidad] = useState<Modalidad>("DELIVERY");
   const [formaPago, setFormaPago] = useState<FormaPagoLocal>("ONLINE");
@@ -184,6 +185,12 @@ export default function CarritoPage() {
             </div>
           ))}
         </div>
+
+        {/* ── Cross-selling ──────────────────────────────── */}
+        <CrossSelling
+          nombreCliente={form.nombreCliente}
+          onAgregado={refetch}
+        />
 
         {/* ── Modalidad ──────────────────────────────────── */}
         <div className="card p-5 space-y-4">

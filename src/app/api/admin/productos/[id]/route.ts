@@ -8,6 +8,7 @@ const updateSchema = z.object({
   nombre: z.string().min(2).max(200).optional(),
   descripcion: z.string().max(500).optional(),
   precio: z.number().positive().optional(),
+  precioCarrito: z.number().positive().nullable().optional(),
   imagenUrl: z.string().url().optional().or(z.literal("")).optional(),
   categoriaId: z.number().int().positive().optional(),
   disponible: z.boolean().optional(),
@@ -30,6 +31,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: {
         ...parsed.data,
         imagenUrl: parsed.data.imagenUrl === "" ? null : parsed.data.imagenUrl,
+        // precioCarrito: null quita el precio especial; undefined = sin cambio
+        precioCarrito: parsed.data.precioCarrito === undefined ? undefined : (parsed.data.precioCarrito ?? null),
       },
     });
     return NextResponse.json({ ok: true, data: producto });

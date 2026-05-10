@@ -8,6 +8,7 @@ const productoSchema = z.object({
   nombre: z.string().min(2).max(200),
   descripcion: z.string().max(500).optional(),
   precio: z.number().positive(),
+  precioCarrito: z.number().positive().nullable().optional(),
   imagenUrl: z.string().url().optional().or(z.literal("")),
   categoriaId: z.number().int().positive(),
   disponible: z.boolean().default(true),
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     data: {
       ...parsed.data,
       imagenUrl: parsed.data.imagenUrl || null,
+      precioCarrito: parsed.data.precioCarrito ?? null,
     },
   });
   return NextResponse.json({ ok: true, data: producto }, { status: 201 });

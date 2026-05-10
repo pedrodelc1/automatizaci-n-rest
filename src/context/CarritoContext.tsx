@@ -7,6 +7,7 @@ export interface ItemCarrito {
   producto: Producto;
   cantidad: number;
   notasItem?: string | null;
+  esCrossSell?: boolean;
 }
 
 interface CarritoContextType {
@@ -18,6 +19,7 @@ interface CarritoContextType {
   cambiarCantidad: (productoId: number, cantidad: number) => void;
   actualizarNotas: (productoId: number, notas: string) => void;
   vaciar: () => void;
+  refetch: () => void;
 }
 
 const CarritoContext = createContext<CarritoContextType | null>(null);
@@ -28,19 +30,22 @@ function mapItems(data: any[]): ItemCarrito[] {
     producto: i.producto,
     cantidad: i.cantidad,
     notasItem: i.notasItem,
+    esCrossSell: i.esCrossSell ?? false,
   }));
 }
 
 export function CarritoProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ItemCarrito[]>([]);
 
-  // Cargar carrito al montar
-  useEffect(() => {
-    fetch("/api/carrito")
-      .then((r) => r.json())
-      .then((d) => { if (d.ok) setItems(mapItems(d.data)); })
-      .catch(() => {});
+  const cargarCarrito = useCallback(async () => {
+    try {
+      const res = await fetch("/api/carrito");
+      const d = await res.json();
+      if (d.ok) setItems(mapItems(d.data));
+    } catch {}
   }, []);
+
+  useEffect(() => { cargarCarrito(); }, [cargarCarrito]);
 
   // Sincroniza el estado local con la respuesta del servidor
   const sync = useCallback(async (fn: () => Promise<Response>) => {
@@ -106,10 +111,17 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   }, [sync]);
 
   const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0);
-  const totalPrecio = items.reduce(
-    (sum, i) => sum + Number(i.producto.precio) * i.cantidad,
-    0
-  );
+  const totalPrecio = items.reduce((sum, i) => {
+    // Si el item es cross-sell y tiene precioCarrito, usar ese precio en el display
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prod = i.producto as any;
+    const precioCarrito = prod.precioCarrito ? Number(prod.precioCarrito) : null;
+    const precio =
+      i.esCrossSell && precioCarrito !== null && precioCarrito < Number(i.producto.precio)
+        ? precioCarrito
+        : Number(i.producto.precio);
+    return sum + precio * i.cantidad;
+  }, 0);
 
   return (
     <CarritoContext.Provider
@@ -122,6 +134,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
         cambiarCantidad,
         actualizarNotas,
         vaciar,
+        refetch: cargarCarrito,
       }}
     >
       {children}

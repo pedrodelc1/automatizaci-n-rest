@@ -23,6 +23,7 @@ model Producto {
   nombre        String     @db.VarChar(200)
   descripcion   String?    @db.Text
   precio        Decimal    @db.Decimal(10, 2)
+  precioCarrito Decimal?   @map("precio_carrito") @db.Decimal(10, 2)
   imagenUrl     String?    @map("imagen_url") @db.VarChar(500)
   categoriaId   Int        @map("categoria_id")
   disponible    Boolean    @default(true)
@@ -117,13 +118,24 @@ model SesionCarrito {
 
 model ItemCarritoSesion {
   id         Int           @id @default(autoincrement())
-  sesionId   String        @map("sesion_id")
-  productoId Int           @map("producto_id")
-  cantidad   Int
-  notasItem  String?       @map("notas_item") @db.Text
+  sesionId      String        @map("sesion_id")
+  productoId    Int           @map("producto_id")
+  cantidad      Int
+  notasItem     String?       @map("notas_item") @db.Text
+  esCrossSell   Boolean       @default(false) @map("es_cross_sell")
   sesion     SesionCarrito @relation(fields: [sesionId], references: [id], onDelete: Cascade)
   producto   Producto      @relation(fields: [productoId], references: [id])
 
   @@unique([sesionId, productoId])
   @@map("items_sesion_carrito")
+}
+
+model HistorialPrecio {
+  id          Int      @id @default(autoincrement())
+  porcentaje  Float
+  categoriaId Int?     @map("categoria_id")
+  descripcion String?  @db.VarChar(200)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+
+  @@map("historial_precios")
 }

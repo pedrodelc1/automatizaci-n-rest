@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   // Cookie contiene un token HMAC opaco — nunca la contraseña en crudo
   res.cookies.set(getAdminCookieName(), getSessionToken(), {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 60 * 60 * 24 * 7, // 7 días
     path: "/",
